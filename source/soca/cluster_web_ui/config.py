@@ -145,7 +145,8 @@ class Config(object):
              'ap-southeast-1': 'ami-068263e9c9ca3d9dc',
              'ap-southeast-2': 'ami-07ce6711013585e48',
              'ap-south-1': 'ami-0d4304f1bb621ae46',
-             'sa-east-1': 'ami-0c297587e3093aa24'
+             'sa-east-1': 'ami-0c297587e3093aa24',
+
         },
         "non-graphics": {
              "us-east-1": "ami-0d9299304a5e3cfea",
@@ -164,6 +165,7 @@ class Config(object):
              "ap-southeast-2": "ami-0058a6d6659ce124f",
              "ap-south-1": "ami-074192a64ff10aa67",
              "sa-east-1": "ami-02938726ac94b1cea",
+            'cn-northwest-1': 'ami-07156fa9c4496e739'
         }
     }
 

@@ -177,8 +177,8 @@ def windows_auto_stop_instance(instances_to_check):
                             logger.error("windows_auto_stop_instance: Instance is not in Running state or SSM daemon is not running. This instance is probably still starting up ...")
                         ssm_failed = True
 
+                    ssm_command_id = check_dcv_session["Command"]["CommandId"]
                     if ssm_failed is False:
-                        ssm_command_id = check_dcv_session["Command"]["CommandId"]
                         while ssm_list_command_loop < 6:
                             check_command_status = client_ssm.list_commands(CommandId=ssm_command_id)['Commands'][0]['Status']
                             if check_command_status != "Success":
@@ -193,8 +193,8 @@ def windows_auto_stop_instance(instances_to_check):
                                 break
 
                     if ssm_list_command_loop >= 5:
-                       logger.error("windows_auto_stop_instance: Unable to determine status SSM responses after 2 minutes timeout for {} : {} ".format(ssm_command_id, str(client_ssm.list_commands(CommandId=ssm_command_id))))
-                       ssm_failed = True
+                        logger.error("windows_auto_stop_instance: Unable to determine status SSM responses after 2 minutes timeout for {} : {} ".format(ssm_command_id, str(client_ssm.list_commands(CommandId=ssm_command_id))))
+                        ssm_failed = True
 
                     if ssm_failed is False:
                         ssm_output = client_ssm.get_command_invocation(CommandId=ssm_command_id,InstanceId=instance_id)
