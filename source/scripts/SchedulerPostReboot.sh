@@ -316,6 +316,7 @@ if [[ ! $(command -v npm) ]];
 then
   echo "npm not detected, installing it ... "
   export NVM_DIR="/root/nvm/$(date +%s)/.nvm"
+  export NVM_NODEJS_ORG_MIRROR=https://npm.taobao.org/mirrors/node/
   mkdir -p $NVM_DIR
   echo "Downloading $NVM_URL"
   wget "$NVM_URL"
@@ -332,7 +333,7 @@ then
 fi
 
 # Install required Node module
-npm install --prefix /apps/soca/"$SOCA_CONFIGURATION"/cluster_web_ui/static monaco-editor@0.24.0
+npm install --prefix /apps/soca/"$SOCA_CONFIGURATION"/cluster_web_ui/static --registry https://registry.npm.taobao.org monaco-editor@0.24.0
 
 # Start Web UI
 chmod +x /apps/soca/"$SOCA_CONFIGURATION"/cluster_web_ui/socawebui.sh
