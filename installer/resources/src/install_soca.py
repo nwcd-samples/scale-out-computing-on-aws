@@ -25,12 +25,13 @@ try:
     from colored import fg, bg, attr
     import boto3
     from requests import get
-    from requests.exceptions import RequestException, Timeout
+    from requests.exceptions import RequestException, Timeout, ConnectionError
     from botocore.client import ClientError
     from botocore.exceptions import ProfileNotFound, ValidationError
     from botocore import config
     import shutil
     import urllib3
+    from urllib3.exceptions import NewConnectionError
     import base64
     import getpass
     import yaml
@@ -728,7 +729,7 @@ if __name__ == "__main__":
                         # Run a first check to determine if client IP provided by the customer is valid
                         try:
                             check_firewall = get(f"{output['OutputValue']}", verify=False, timeout=35) # nosec
-                        except Timeout:
+                        except (Timeout, ConnectionError, NewConnectionError):
                             print(f"{fg('yellow')}Unable to connect to the SOCA endpoint URL. Maybe your IP {install_parameters['client_ip']} is not valid/has changed (maybe you are behind a proxy?). If that's the case please go to AWS console and authorize your real IP on the Scheduler Security Group{attr('reset')}")
                             sys.exit(1)
                         soca_check_loop = 0
