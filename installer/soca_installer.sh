@@ -84,17 +84,17 @@ fi
 
 # unzip the pre-downloaded python packages for installer EC2
 # which can reduce the install time
-soca_installer_pkg = 'resources/pre-download/soca-2.7-installer-pkg'
+soca_installer_pkg='resources/pre-download/soca-2.7-installer-pkg'
 if [[ ! -d $soca_installer_pkg ]]; then
-  unzip "${soca_installer_pkg}.zip" -d resources/pre-download
+  unzip "$soca_installer_pkg.zip" -d resources/pre-download
 fi
 
 if [[ $QUIET_MODE = "true" ]]; then
   pip3 install --upgrade pip --quiet
-  pip3 install --no-index --find-links $soca_installer_pkg -r requirements.txt --quiet
+  pip3 install --no-index --find-links $soca_installer_pkg -r "$soca_installer_pkg/requirements.txt" --quiet
 else
   pip3 install --upgrade pip
-  pip3 install --no-index --find-links $soca_installer_pkg -r requirements.txt
+  pip3 install --no-index --find-links $soca_installer_pkg -r "$soca_installer_pkg/requirements.txt"
 fi
 
 #source "$PYTHON_VENV/bin/deactivate"

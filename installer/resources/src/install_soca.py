@@ -747,7 +747,6 @@ if __name__ == "__main__":
                             print("SOCA not ready yet, checking again in 120 seconds ... ")
                             response = get(f"{output['OutputValue']}", verify=False, timeout=15)
                             print(f"response status: {response.status_code}")
-                            print(f"response status type: {type(response.status_code)}")
                             if response.status_code == 200:
                                 break
                             time.sleep(120)
