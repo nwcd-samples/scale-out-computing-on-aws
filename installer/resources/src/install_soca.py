@@ -729,6 +729,7 @@ if __name__ == "__main__":
                         # Run a first check to determine if client IP provided by the customer is valid
                         try:
                             check_firewall = get(f"{output['OutputValue']}", verify=False, timeout=35) # nosec
+                            print(f"check_firewall status {check_firewall.status_code}")
                         except (Timeout, ConnectionError, NewConnectionError):
                             print(f"{fg('yellow')}Unable to connect to the SOCA endpoint URL. Maybe your IP {install_parameters['client_ip']} is not valid/has changed (maybe you are behind a proxy?). If that's the case please go to AWS console and authorize your real IP on the Scheduler Security Group{attr('reset')}")
                             sys.exit(1)
@@ -739,14 +740,18 @@ if __name__ == "__main__":
                         else:
                             max_check_loop = 10
 
-                        while get(output['OutputValue'], verify=False, timeout=15).status_code != 200 and soca_check_loop <= max_check_loop: # nosec
-                            print("SOCA not ready yet, checking again in 120 seconds ... ")
-                            time.sleep(120)
-                            soca_check_loop += 1
+                        while soca_check_loop <= max_check_loop: # nosec
                             if soca_check_loop == max_check_loop:
                                 print(f"{fg('yellow')}Could not determine if SOCA is ready after 20 minutes. Connect to the system via SSM and check the logs. {attr('reset')}")
                                 sys.exit(1)
-
+                            print("SOCA not ready yet, checking again in 120 seconds ... ")
+                            response = get(f"{output['OutputValue']}", verify=False, timeout=15)
+                            print(f"response status: {response.status_code}")
+                            print(f"response status type: {type(response.status_code)}")
+                            if response.status_code == 200:
+                                break
+                            time.sleep(120)
+                            soca_check_loop += 1
                         print(f"{fg('green')}SOCA is ready! Login via  {output['OutputValue']}{attr('reset')}")
 
             except ValidationError:

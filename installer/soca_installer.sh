@@ -81,12 +81,20 @@ else
   echo "Loading Python Virtual Environment"
   source "$PYTHON_VENV/bin/activate"
 fi
+
+# unzip the pre-downloaded python packages for installer EC2
+# which can reduce the install time
+soca_installer_pkg = 'resources/pre-download/soca-2.7-installer-pkg'
+if [[ ! -d $soca_installer_pkg ]]; then
+  unzip "${soca_installer_pkg}.zip" -d resources/pre-download
+fi
+
 if [[ $QUIET_MODE = "true" ]]; then
   pip3 install --upgrade pip --quiet
-  pip3 install -r resources/src/requirements.txt --quiet
+  pip3 install --no-index --find-links $soca_installer_pkg -r requirements.txt --quiet
 else
   pip3 install --upgrade pip
-  pip3 install -r resources/src/requirements.txt
+  pip3 install --no-index --find-links $soca_installer_pkg -r requirements.txt
 fi
 
 #source "$PYTHON_VENV/bin/deactivate"
@@ -98,8 +106,8 @@ if [[ ! -d $NVM_DIR ]]; then
   echo "Local NodeJS environment not detected, creating one ..."
   echo "Copying local NVM file to $NVM_DIR"
   #  curl --silent -o- "$NODEJS_BIN" | bash
-  cp resources/src/nvm.sh $NVM_DIR
-  cp resources/src/bash_completion $NVM_DIR
+  cp resources/pre-download/nvm.sh $NVM_DIR
+  cp resources/pre-download/bash_completion $NVM_DIR
 
   echo "Installing Node & NPM via nvm"
   # use china internal mirror
