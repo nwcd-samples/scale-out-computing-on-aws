@@ -1,0 +1,13 @@
+{
+  "name": "static",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Only for dismiss warning when installing npm package",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
