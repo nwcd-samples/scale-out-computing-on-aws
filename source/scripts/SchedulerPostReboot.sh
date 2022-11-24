@@ -369,13 +369,15 @@ curl -k -H "X-SOCA-TOKEN: $admin_api_key" \
 usermod --shell /bin/bash ec2-user
 
 # Avoid customer to use system account to submit job
-if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]] || [[ "$SOCA_BASE_OS" == "rhel7" ]]; then
-    echo "alias qsub='echo -e \" !!!! Do not submit job with system account. \n\n Please use LDAP account instead. !!!! \"'" >> /home/ec2-user/.bash_profile
-fi
+#if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]] || [[ "$SOCA_BASE_OS" == "rhel7" ]]; then
+#    echo "alias qsub='echo -e \" !!!! Do not submit job with system account. \n\n Please use LDAP account instead. !!!! \"'" >> /home/ec2-user/.bash_profile
+#fi
+#
+#if [[ "$SOCA_BASE_OS" == "centos7" ]]; then
+#    echo "alias qsub='echo -e \" !!!! Do not submit job with system account. \n\n Please use LDAP account instead. !!!! \"'" >> /home/centos/.bash_profile
+#fi
+echo "alias qsub='echo -e \" !!!! Do not submit job with system account. \n\n Please use LDAP account instead. !!!! \"'" >> /home/ec2-user/.bash_profile
 
-if [[ "$SOCA_BASE_OS" == "centos7" ]]; then
-    echo "alias qsub='echo -e \" !!!! Do not submit job with system account. \n\n Please use LDAP account instead. !!!! \"'" >> /home/centos/.bash_profile
-fi
 
 # Enforce minimum permissions
 chmod 600 /apps/soca/$SOCA_CONFIGURATION
