@@ -359,13 +359,14 @@ curl -k -H "X-SOCA-TOKEN: $admin_api_key" \
  -X POST https://127.0.0.1:8443/api/ldap/user >> /root/create_new_user.log 2>&1
 
 # Re-enable access
-if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]] || [[ "$SOCA_BASE_OS" == "rhel7" ]]; then
-     usermod --shell /bin/bash ec2-user
-fi
-
-if [[ "$SOCA_BASE_OS" == "centos7" ]]; then
-     usermod --shell /bin/bash centos
-fi
+#if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]] || [[ "$SOCA_BASE_OS" == "rhel7" ]]; then
+#     usermod --shell /bin/bash ec2-user
+#fi
+#
+#if [[ "$SOCA_BASE_OS" == "centos7" ]]; then
+#     usermod --shell /bin/bash ec2-user
+#fi
+usermod --shell /bin/bash ec2-user
 
 # Avoid customer to use system account to submit job
 if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]] || [[ "$SOCA_BASE_OS" == "rhel7" ]]; then
