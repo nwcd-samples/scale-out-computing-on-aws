@@ -347,7 +347,7 @@ def get_install_parameters():
                     install_parameters["directory_service"] = directory_service["message"]["id"]
                     install_parameters["directory_service_shortname"] = directory_service["message"]["netbios"]
                     install_parameters["directory_service_name"] = directory_service["message"]["name"]
-                    install_parameters["directory_service_dns"] = directory_service["message"]["dns"]
+                    install_parameters["directory_service_dns"] = directory_service["message"]["dns"][0]
                 else:
                     print(f"{fg('red')}Error: {directory_service['message']} {attr('reset')}")
                     sys.exit(1)

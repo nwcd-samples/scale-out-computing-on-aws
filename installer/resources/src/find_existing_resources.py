@@ -117,9 +117,9 @@ class FindExistingResource:
             max_results = 50
             while token is True:
                 if not next_token:
-                    all_ds = self.ds.describe_directories(MaxResults=max_results)
+                    all_ds = self.ds.describe_directories(Limit=max_results)
                 else:
-                    all_ds = self.ds.describe_directories(MaxResults=max_results, NextToken=next_token)
+                    all_ds = self.ds.describe_directories(Limit=max_results, NextToken=next_token)
                 try:
                     next_token = all_ds['Token']
                 except KeyError:
