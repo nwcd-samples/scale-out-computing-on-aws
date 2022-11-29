@@ -344,7 +344,7 @@ def get_install_parameters():
                 if directory_service["success"] is True:
                     install_parameters["directory_service_ds_user"] = get_input(f"Username of a domain user with  admin permissions?", None, None, str)
                     install_parameters["directory_service_ds_user_password"] = get_input(f"Password of the domain user with admin permissions", None, None, str)
-                    install_parameters["directory_service"] = directory_service["message"]["id"]
+                    install_parameters["directory_service_id"] = directory_service["message"]["id"]
                     install_parameters["directory_service_shortname"] = directory_service["message"]["netbios"]
                     install_parameters["directory_service_name"] = directory_service["message"]["name"]
                     install_parameters["directory_service_dns"] = directory_service["message"]["dns"][0]
@@ -353,22 +353,23 @@ def get_install_parameters():
                     sys.exit(1)
 
     # ElasticSearch Configuration (only possible when using existing VPC)
-    if install_parameters["vpc_id"]:
-        choice_es = get_input(f"[Step 11/{total_install_phases}] {install_phases[11]}", None, ["new", "existing"], str)
-        if choice_es == "existing":
-            elasticsearch_cluster = FindExistingResource(install_parameters["region"],
-                                                         install_parameters["client_ip"]).find_elasticsearch(install_parameters["vpc_id"])
-            if elasticsearch_cluster["success"] is True:
-                install_parameters["es_endpoint"] = elasticsearch_cluster["message"]["endpoint"]
-            else:
-                print(f"{fg('red')}Error: {elasticsearch_cluster['message']} {attr('reset')}")
-                sys.exit(1)
-    else:
-        install_parameters["es_endpoint"] = None
+    # if install_parameters["vpc_id"]:
+    #     choice_es = get_input(f"[Step 11/{total_install_phases}] {install_phases[11]}", None, ["new", "existing"], str)
+    #     if choice_es == "existing":
+    #         elasticsearch_cluster = FindExistingResource(install_parameters["region"],
+    #                                                      install_parameters["client_ip"]).find_elasticsearch(install_parameters["vpc_id"])
+    #         if elasticsearch_cluster["success"] is True:
+    #             install_parameters["es_endpoint"] = elasticsearch_cluster["message"]["endpoint"]
+    #         else:
+    #             print(f"{fg('red')}Error: {elasticsearch_cluster['message']} {attr('reset')}")
+    #             sys.exit(1)
+    # else:
+    #     install_parameters["es_endpoint"] = None
+    install_parameters["es_endpoint"] = None
 
     # IAM Roles configuration (only possible when using existing VPC)
     if install_parameters["vpc_id"]:
-        choice_iam_roles = get_input(f"[Step 12/{total_install_phases}] {install_phases[12]}", None, ["new", "existing"], str)
+        choice_iam_roles = get_input(f"[Step 11/{total_install_phases}] {install_phases[11]}", None, ["new", "existing"], str)
         if choice_iam_roles == "existing":
             scheduler_role = FindExistingResource(install_parameters["region"],
                                                   install_parameters["client_ip"]).get_iam_roles("scheduler")
@@ -521,8 +522,8 @@ if __name__ == "__main__":
         8: "Do you want to create new security groups (default) or use existing ones? ",
         9: "Do you want to create new filesystems for /apps & /data (default) or use existing ones? ",
         10: "Do you want to create a new Directory Service Managed AD (default) or use an existing one? ",
-        11: "Do you want to create a new ElasticSearch (default) or use an existing one?",
-        12: "Do you want to create new IAM roles for scheduler & compute nodes (default) or use existing ones?"
+        11: "Do you want to create new IAM roles for scheduler & compute nodes (default) or use existing ones?"
+        # 11: "Do you want to create a new ElasticSearch (default) or use an existing one?",
     }
     total_install_phases = len(install_phases)
     install_parameters = {
