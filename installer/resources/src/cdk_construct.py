@@ -109,8 +109,8 @@ class SOCAInstall(cdk.Stack):
             print("Creating vpc endpoints")
             self.create_vpc_endpoints()
         self.storage()  # Create Storage backend
-        if install_props.Config.directoryservice.provider == "activedirectory" and not user_specified_variables.directory_service_id:
-            self.directoryservice()  # Create Directory Service
+        if install_props.Config.directoryservice.provider == "activedirectory":
+            self.directory_service()  # Configure Directory Service
         # self.analytics()  # Create ElasticSearch domain
         self.scheduler()  # Configure the Scheduler
         self.viewer()  # Configure the DCV Load Balancer
@@ -455,7 +455,7 @@ class SOCAInstall(cdk.Stack):
 
             self.soca_resources[policy_data["attach_to_role"]].attach_inline_policy(iam.Policy(self, f"{user_specified_variables.cluster_id}-{policy_name}", document=iam.PolicyDocument.from_json(json.loads(policy_content))))
 
-    def directoryservice(self):
+    def directory_service(self):
         """
         Deploy an AWS Manage AD Directory Service
         """
@@ -468,6 +468,8 @@ class SOCAInstall(cdk.Stack):
 
         # Create a new AWS Directory Service Managed AD
         if not user_specified_variables.directory_service_id:
+            # core.CfnOutput(self, "directory_service_id",
+            #                value="Installing SOCA with new created AWS AD")
             self.soca_resources["ds_domain_admin"] = "Admin"
             self.soca_resources["ds_domain_admin_password"] = f"{random.choice(string.ascii_lowercase)}{random.choice(string.digits)}{random.choice(string.ascii_uppercase)}{''.join(random.choice(string.ascii_lowercase + string.digits + string.ascii_uppercase) for i in range(20))}"
             self.soca_resources["directory_service"] = ds.CfnMicrosoftAD(self, "DSManagedAD", name=install_props.Config.directoryservice.activedirectory.name,
@@ -475,28 +477,39 @@ class SOCAInstall(cdk.Stack):
                                                                          short_name=install_props.Config.directoryservice.activedirectory.short_name,  # NETBIOS
                                                                          password=self.soca_resources["ds_domain_admin_password"],
                                                                          vpc_settings=ds.CfnMicrosoftAD.VpcSettingsProperty(subnet_ids=launch_subnets, vpc_id=self.soca_resources["vpc"].vpc_id))
+            self.soca_resources["ds_domain_primary_dns"] = core.Fn.select(0, self.soca_resources["directory_service"].attr_dns_ip_addresses)
+            self.soca_resources["ds_domain_secondary_dns"] = core.Fn.select(1, self.soca_resources["directory_service"].attr_dns_ip_addresses)
+            self.soca_resources["ds_domain_name"] = install_props.Config.directoryservice.activedirectory.name
+        else:
+            # core.CfnOutput(self, "directory_service_id",
+            #                value=f"Installing SOCA with existed AD {user_specified_variables.directory_service_id}")
+            self.soca_resources["ds_domain_primary_dns"] = user_specified_variables.directory_service_primary_dns
+            self.soca_resources["ds_domain_secondary_dns"] = user_specified_variables.directory_service_secondary_dns
+            self.soca_resources["ds_domain_name"] = user_specified_variables.directory_service_name
 
-            # Create DNS Forwarder. Requests sent to AD will be forwarded to AD DNS
-            # Other requests will remain the same. Do not create custom DHCP Option Set otherwise resources such as FSx or EFS won't resolve
-            resolver = route53resolver.CfnResolverEndpoint(self, "ADRoute53OutboundResolver", direction="OUTBOUND",
-                                                           name=user_specified_variables.cluster_id,
-                                                           ip_addresses=[
-                                                               route53resolver.CfnResolverEndpoint.IpAddressRequestProperty(subnet_id=launch_subnets[0]),
-                                                               route53resolver.CfnResolverEndpoint.IpAddressRequestProperty(subnet_id=launch_subnets[1])],
-                                                           security_group_ids=[self.soca_resources["scheduler_sg"].security_group_id,
-                                                                               self.soca_resources["compute_node_sg"].security_group_id])
-            resolver_rule = route53resolver.CfnResolverRule(self, "ADRoute53OutboundResolverRule",
-                                                            name=user_specified_variables.cluster_id,
-                                                            domain_name=install_props.Config.directoryservice.activedirectory.name,
-                                                            rule_type="FORWARD",
-                                                            resolver_endpoint_id=resolver.attr_resolver_endpoint_id,
-                                                            target_ips=[
-                                                                route53resolver.CfnResolverRule.TargetAddressProperty(ip=core.Fn.select(0, self.soca_resources["directory_service"].attr_dns_ip_addresses), port="53"),
-                                                                route53resolver.CfnResolverRule.TargetAddressProperty(ip=core.Fn.select(1, self.soca_resources["directory_service"].attr_dns_ip_addresses), port="53")])
+        # core.CfnOutput(self, "self.soca_resources[\"ds_domain_primary_dns\"]", value=self.soca_resources["ds_domain_primary_dns"])
+        # core.CfnOutput(self, "self.soca_resources[\"ds_domain_secondary_dns\"]", value=self.soca_resources["ds_domain_secondary_dns"])
+        # Create DNS Forwarder. Requests sent to AD will be forwarded to AD DNS
+        # Other requests will remain the same. Do not create custom DHCP Option Set otherwise resources such as FSx or EFS won't resolve
+        resolver = route53resolver.CfnResolverEndpoint(self, "ADRoute53OutboundResolver", direction="OUTBOUND",
+                                                       name=user_specified_variables.cluster_id,
+                                                       ip_addresses=[
+                                                           route53resolver.CfnResolverEndpoint.IpAddressRequestProperty(subnet_id=launch_subnets[0]),
+                                                           route53resolver.CfnResolverEndpoint.IpAddressRequestProperty(subnet_id=launch_subnets[1])],
+                                                       security_group_ids=[self.soca_resources["scheduler_sg"].security_group_id,
+                                                                           self.soca_resources["compute_node_sg"].security_group_id])
+        resolver_rule = route53resolver.CfnResolverRule(self, "ADRoute53OutboundResolverRule",
+                                                        name=user_specified_variables.cluster_id,
+                                                        domain_name=self.soca_resources["ds_domain_name"],
+                                                        rule_type="FORWARD",
+                                                        resolver_endpoint_id=resolver.attr_resolver_endpoint_id,
+                                                        target_ips=[
+                                                            route53resolver.CfnResolverRule.TargetAddressProperty(ip=self.soca_resources["ds_domain_primary_dns"], port="53"),
+                                                            route53resolver.CfnResolverRule.TargetAddressProperty(ip=self.soca_resources["ds_domain_secondary_dns"], port="53")])
 
-            route53resolver.CfnResolverRuleAssociation(self, "ADRoute53ResolverRuleAssociation",
-                                                       resolver_rule_id=resolver_rule.attr_resolver_rule_id,
-                                                       vpc_id=self.soca_resources["vpc"].vpc_id)
+        route53resolver.CfnResolverRuleAssociation(self, "ADRoute53ResolverRuleAssociation",
+                                                   resolver_rule_id=resolver_rule.attr_resolver_rule_id,
+                                                   vpc_id=self.soca_resources["vpc"].vpc_id)
 
     def storage(self):
         """
@@ -808,6 +821,8 @@ class SOCAInstall(cdk.Stack):
                 secret["DSDomainNetbios"] = install_props.Config.directoryservice.activedirectory.short_name.upper()
                 secret["DSDomainAdminUsername"] = self.soca_resources["ds_domain_admin"]
                 secret["DSDomainAdminPassword"] = self.soca_resources["ds_domain_admin_password"]
+                secret["DSDomainPrimaryDNS"] = self.soca_resources["ds_domain_primary_dns"]
+                secret["DSDomainSecondaryDNS"] = self.soca_resources["ds_domain_secondary_dns"]
                 secret["DSServiceAccountUsername"] = "false"
                 secret["DSServiceAccountPassword"] = "false"
                 secret["DSResetLambdaFunctionArn"] = self.soca_resources["reset_ds_lambda"].function_arn
@@ -823,6 +838,8 @@ class SOCAInstall(cdk.Stack):
             secret["DSDomainNetbios"] = user_specified_variables.directory_service_shortname.upper()
             secret["DSDomainAdminUsername"] = user_specified_variables.directory_service_user
             secret["DSDomainAdminPassword"] = user_specified_variables.directory_service_user_password
+            secret["DSDomainPrimaryDNS"] = self.soca_resources["ds_domain_primary_dns"]
+            secret["DSDomainSecondaryDNS"] = self.soca_resources["ds_domain_secondary_dns"]
             secret["DSServiceAccountUsername"] = "false"
             secret["DSServiceAccountPassword"] = "false"
 
@@ -1039,7 +1056,8 @@ if __name__ == "__main__":
         "directory_service_shortname": app.node.try_get_context("directory_service_shortname"),
         "directory_service_name": app.node.try_get_context("directory_service_name"),
         "directory_service_id": app.node.try_get_context("directory_service_id"),
-        "directory_service_ds_dns": app.node.try_get_context("directory_service_dns"),
+        "directory_service_primary_dns": app.node.try_get_context("directory_service_primary_dns"),
+        "directory_service_secondary_dns": app.node.try_get_context("directory_service_secondary_dns"),
         "es_endpoint": app.node.try_get_context("es_endpoint"),
         "ldap_host": app.node.try_get_context("ldap_host"),
         "compute_node_role_name": app.node.try_get_context("compute_node_role_name"),

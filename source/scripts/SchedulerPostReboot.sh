@@ -50,13 +50,14 @@ cp /root/config.cfg /apps/soca/$SOCA_CONFIGURATION/cluster_node_bootstrap/config
 mkdir -p /apps/soca/$SOCA_CONFIGURATION/cluster_manager/logs
 chmod +x /apps/soca/$SOCA_CONFIGURATION/cluster_manager/socaqstat.py
 
+# Pre-downloaded already and placed in installer/resource/pre-download folder
 # Download static pricing list for China regions
-wget https://pricing.cn-north-1.amazonaws.com.cn/offers/v1.0/cn/AmazonEC2/current/index.json -O /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/pricing_index.json
-cat <<EOT >> /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/download_china_pricing_index.sh
-#!/bin/bash
-wget https://pricing.cn-north-1.amazonaws.com.cn/offers/v1.0/cn/AmazonEC2/current/index.json -O /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/pricing_index.json
-EOT
-chmod +x /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/download_china_pricing_index.sh
+#wget https://pricing.cn-north-1.amazonaws.com.cn/offers/v1.0/cn/AmazonEC2/current/index.json -O /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/pricing_index.json
+#cat <<EOT >> /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/download_china_pricing_index.sh
+##!/bin/bash
+#wget https://pricing.cn-north-1.amazonaws.com.cn/offers/v1.0/cn/AmazonEC2/current/index.json -O /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/pricing_index.json
+#EOT
+#chmod +x /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/download_china_pricing_index.sh
 
 # Generate default queue_mapping file based on default AMI chosen by customer
 cat <<EOT >> /apps/soca/$SOCA_CONFIGURATION/cluster_manager/settings/queue_mapping.yml
@@ -188,7 +189,7 @@ echo "
 * * * * * source /etc/environment; /apps/soca/$SOCA_CONFIGURATION/python/latest/bin/python3 /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/cluster_nodes_tracking.py >> /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/cluster_nodes_tracking.log 2>&1
 @hourly source /etc/environment; /apps/soca/$SOCA_CONFIGURATION/python/latest/bin/python3 /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/job_tracking.py >> /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/job_tracking.log 2>&1
 */10 * * * * source /etc/environment; /apps/soca/$SOCA_CONFIGURATION/python/latest/bin/python3 /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/desktop_hosts_tracking.py >> /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/desktop_hosts_tracking.log 2>&1
-@daily /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/download_china_pricing_index.sh > /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/download_china_pricing_index.log 2>&1
+# @daily /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/download_china_pricing_index.sh > /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/download_china_pricing_index.log 2>&1
 
 ## Cluster Log Management
 @daily  source /etc/environment; /bin/bash /apps/soca/$SOCA_CONFIGURATION/cluster_logs_management/send_logs_s3.sh >>/apps/soca/$SOCA_CONFIGURATION/cluster_logs_management/send_logs_s3.log 2>&1
@@ -220,6 +221,22 @@ if [[ "$SOCA_AUTH_PROVIDER" == "activedirectory" ]]; then
   DS_DOMAIN_NETBIOS=$(echo "$secret" | grep -oP '"DSDomainNetbios": \"(.*?)\"' | sed 's/"DSDomainNetbios": //g' | tr -d '"')
   DS_DOMAIN_BASE=$(echo "$secret" | grep -oP '"DSDomainBase": \"(.*?)\"' | sed 's/"DSDomainBase": //g' | tr -d '"')
   DS_DIRECTORY_ID=$(echo "$secret" | grep -oP '"DSDirectoryId": \"(.*?)\"' | sed 's/"DSDirectoryId": //g' | tr -d '"')
+#  DS_DIRECTORY_DNS=$(echo "$secret" | grep -oP '"DSDomainDNS": \"(.*?)\"' | sed 's/"DSDomainDNS": //g' | tr -d '"')
+#  # DS_DIRECTORY_DNS is not empty, which indicates connecting existed AD
+#  if [[ ! -z $DS_DIRECTORY_DNS ]];then
+#    if [[ ! -f /etc/resolv.conf.bak ]];then
+#      cp /etc/resolv.conf /etc/resolv.conf.bak
+#    fi
+#    echo "Inserting $DS_DIRECTORY_DNS to /etc/resolv.conf"
+#    line_num=$(awk '/^nameserver/ { print NR; exit}' '/etc/resolv.conf')
+#    if [[ -z $line_num ]];then
+#      sed -i "$ a nameserver $DS_DIRECTORY_DNS" /etc/resolv.conf
+#    else
+#      sed -i "$line_num i nameserver $DS_DIRECTORY_DNS" /etc/resolv.conf
+#    fi
+#  else
+#    echo "DS_DIRECTORY_DNS is empty, SOCA created an aws managed AD as ldap"
+#  fi
 
   # Waiting for the Route53 Resolver to be fully active, otherwise SOCA won't be able to resolve the AD domain
   SCHEDULER_UPPER_HOSTNAME=$(hostname | awk '{split($0,h,"."); print toupper(h[1])}')
@@ -331,7 +348,6 @@ then
   source "$NVM_DIR/bash_completion"
   nvm install v8.7.0
 fi
-
 # Install required Node module
 npm install --prefix /apps/soca/"$SOCA_CONFIGURATION"/cluster_web_ui/static --registry https://registry.npm.taobao.org monaco-editor@0.24.0
 

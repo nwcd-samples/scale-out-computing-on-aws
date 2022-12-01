@@ -89,6 +89,13 @@ if [[ ! -d $soca_installer_pkg ]]; then
   unzip "$soca_installer_pkg.zip" -d resources/pre-download
 fi
 
+# make sure current working directory is installer
+# pre-download china region price json to reduce post check time
+pricing_index_dir='../source/soca/cluster_analytics'
+if [[ ! -f "$pricing_index_dir/pricing_index.json" ]];then
+  unzip resources/pre-download/pricing_index.zip -d $pricing_index_dir
+fi
+
 if [[ $QUIET_MODE = "true" ]]; then
   pip3 install --upgrade pip --quiet
   pip3 install --no-index --find-links $soca_installer_pkg -r "$soca_installer_pkg/requirements.txt" --quiet
