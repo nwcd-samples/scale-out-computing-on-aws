@@ -22,17 +22,17 @@ if [[ $# -lt 2 ]]; then
     exit 1
 fi
 
-# Install SSM
-machine=$(uname -m)
-if ! systemctl status amazon-ssm-agent; then
-    if [[ $machine == "x86_64" ]]; then
-        yum install -y $SSM_X86_64_URL
-    elif [[ $machine == "aarch64" ]]; then
-        yum install -y $SSM_AARCH64_URL
-    fi
-    systemctl enable amazon-ssm-agent || true
-    systemctl restart amazon-ssm-agent
-fi
+## Install SSM
+#machine=$(uname -m)
+#if ! systemctl status amazon-ssm-agent; then
+#    if [[ $machine == "x86_64" ]]; then
+#        yum install -y $SSM_X86_64_URL
+#    elif [[ $machine == "aarch64" ]]; then
+#        yum install -y $SSM_AARCH64_URL
+#    fi
+#    systemctl enable amazon-ssm-agent || true
+#    systemctl restart amazon-ssm-agent
+#fi
 
 mkdir -p /apps/soca/$SOCA_CONFIGURATION
 FS_DATA_PROVIDER=$1
@@ -44,77 +44,77 @@ SERVER_HOSTNAME=$(hostname)
 SERVER_HOSTNAME_ALT=$(echo $SERVER_HOSTNAME | cut -d. -f1)
 echo $SERVER_IP $SERVER_HOSTNAME $SERVER_HOSTNAME_ALT >> /etc/hosts
 
-# Install System required libraries / EPEL
-if [[ $SOCA_BASE_OS == "rhel7" ]]; then
-  # RHEL7
-  curl "$EPEL_URL" -o $EPEL_RPM
-  if [[ $(md5sum "$EPEL_RPM" | awk '{print $1}') != "$EPEL_HASH" ]];  then
-      echo -e "FATAL ERROR: Checksum for EPEL failed. File may be compromised." > /etc/motd
-      exit 1
-  fi
-  yum -y install $EPEL_RPM
-  yum install -y $(echo ${SYSTEM_PKGS[*]} ${SCHEDULER_PKGS[*]}) --enablerepo rhel-7-server-rhui-optional-rpms
-elif [[ $SOCA_BASE_OS == "centos7" ]]; then
-  # CentOS
-  yum -y install epel-release
-  yum install -y $(echo ${SYSTEM_PKGS[*]} ${SCHEDULER_PKGS[*]})
-else
-  # AL2
-  amazon-linux-extras install -y epel
-  yum update --security
-  yum install -y $(echo ${SYSTEM_PKGS[*]} ${SCHEDULER_PKGS[*]})
-fi
-yum install -y $(echo ${OPENLDAP_SERVER_PKGS[*]} ${SSSD_PKGS[*]})
+## Install System required libraries / EPEL
+#if [[ $SOCA_BASE_OS == "rhel7" ]]; then
+#  # RHEL7
+#  curl "$EPEL_URL" -o $EPEL_RPM
+#  if [[ $(md5sum "$EPEL_RPM" | awk '{print $1}') != "$EPEL_HASH" ]];  then
+#      echo -e "FATAL ERROR: Checksum for EPEL failed. File may be compromised." > /etc/motd
+#      exit 1
+#  fi
+#  yum -y install $EPEL_RPM
+#  yum install -y $(echo ${SYSTEM_PKGS[*]} ${SCHEDULER_PKGS[*]}) --enablerepo rhel-7-server-rhui-optional-rpms
+#elif [[ $SOCA_BASE_OS == "centos7" ]]; then
+#  # CentOS
+#  yum -y install epel-release
+#  yum install -y $(echo ${SYSTEM_PKGS[*]} ${SCHEDULER_PKGS[*]})
+#else
+#  # AL2
+#  amazon-linux-extras install -y epel
+#  yum update --security
+#  yum install -y $(echo ${SYSTEM_PKGS[*]} ${SCHEDULER_PKGS[*]})
+#fi
+#yum install -y $(echo ${OPENLDAP_SERVER_PKGS[*]} ${SSSD_PKGS[*]})
 
 # Mount File system
 mkdir -p /apps
 mkdir -p /data
 
-if [[ "$FS_DATA_PROVIDER" == "fsx_lustre" ]] || [[ "$FS_APPS_PROVIDER" == "fsx_lustre" ]]; then
-    if [[ -z "$(rpm -qa lustre-client)" ]]; then
-        # Install FSx for Lustre Client
-        if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]]; then
-            amazon-linux-extras install -y lustre2.10
-        else
-            kernel=$(uname -r)
-            machine=$(uname -m)
-            echo "Found kernel version: $kernel running on: $machine"
-            if [[ $kernel == *"3.10.0-957"*$machine ]]; then
-                yum -y install https://downloads.whamcloud.com/public/lustre/lustre-2.10.8/el7/client/RPMS/x86_64/kmod-lustre-client-2.10.8-1.el7.x86_64.rpm
-                yum -y install https://downloads.whamcloud.com/public/lustre/lustre-2.10.8/el7/client/RPMS/x86_64/lustre-client-2.10.8-1.el7.x86_64.rpm
-            elif [[ $kernel == *"3.10.0-1062"*$machine ]]; then
-                wget https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-rpm-public-key.asc -O /tmp/fsx-rpm-public-key.asc
-                rpm --import /tmp/fsx-rpm-public-key.asc
-                wget https://fsx-lustre-client-repo.s3.amazonaws.com/el/7/fsx-lustre-client.repo -O /etc/yum.repos.d/aws-fsx.repo
-                sed -i 's#7#7.7#' /etc/yum.repos.d/aws-fsx.repo
-                yum clean all
-                yum install -y kmod-lustre-client lustre-client
-            elif [[ $kernel == *"3.10.0-1127"*$machine ]]; then
-                wget https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-rpm-public-key.asc -O /tmp/fsx-rpm-public-key.asc
-                rpm --import /tmp/fsx-rpm-public-key.asc
-                wget https://fsx-lustre-client-repo.s3.amazonaws.com/el/7/fsx-lustre-client.repo -O /etc/yum.repos.d/aws-fsx.repo
-                sed -i 's#7#7.8#' /etc/yum.repos.d/aws-fsx.repo
-                yum clean all
-                yum install -y kmod-lustre-client lustre-client
-            elif [[ $kernel == *"3.10.0-1160"*$machine ]]; then
-                wget https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-rpm-public-key.asc -O /tmp/fsx-rpm-public-key.asc
-                rpm --import /tmp/fsx-rpm-public-key.asc
-                wget https://fsx-lustre-client-repo.s3.amazonaws.com/el/7/fsx-lustre-client.repo -O /etc/yum.repos.d/aws-fsx.repo
-                yum clean all
-                yum install -y kmod-lustre-client lustre-client
-            elif [[ $kernel == *"4.18.0-193"*$machine ]]; then
-                # FSX for Lustre on aarch64 is supported only on 4.18.0-193
-                wget https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-rpm-public-key.asc -O /tmp/fsx-rpm-public-key.asc
-                rpm --import /tmp/fsx-rpm-public-key.asc
-                wget https://fsx-lustre-client-repo.s3.amazonaws.com/centos/7/fsx-lustre-client.repo -O /etc/yum.repos.d/aws-fsx.repo
-                yum clean all
-                yum install -y kmod-lustre-client lustre-client
-            else
-                echo "ERROR: Can't install FSx for Lustre client as kernel version: $kernel isn't matching expected versions: (x86_64: 3.10.0-957, -1062, -1127, -1160, aarch64: 4.18.0-193)!"
-            fi
-        fi
-    fi
-fi
+#if [[ "$FS_DATA_PROVIDER" == "fsx_lustre" ]] || [[ "$FS_APPS_PROVIDER" == "fsx_lustre" ]]; then
+#    if [[ -z "$(rpm -qa lustre-client)" ]]; then
+#        # Install FSx for Lustre Client
+#        if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]]; then
+#            amazon-linux-extras install -y lustre2.10
+#        else
+#            kernel=$(uname -r)
+#            machine=$(uname -m)
+#            echo "Found kernel version: $kernel running on: $machine"
+#            if [[ $kernel == *"3.10.0-957"*$machine ]]; then
+#                yum -y install https://downloads.whamcloud.com/public/lustre/lustre-2.10.8/el7/client/RPMS/x86_64/kmod-lustre-client-2.10.8-1.el7.x86_64.rpm
+#                yum -y install https://downloads.whamcloud.com/public/lustre/lustre-2.10.8/el7/client/RPMS/x86_64/lustre-client-2.10.8-1.el7.x86_64.rpm
+#            elif [[ $kernel == *"3.10.0-1062"*$machine ]]; then
+#                wget https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-rpm-public-key.asc -O /tmp/fsx-rpm-public-key.asc
+#                rpm --import /tmp/fsx-rpm-public-key.asc
+#                wget https://fsx-lustre-client-repo.s3.amazonaws.com/el/7/fsx-lustre-client.repo -O /etc/yum.repos.d/aws-fsx.repo
+#                sed -i 's#7#7.7#' /etc/yum.repos.d/aws-fsx.repo
+#                yum clean all
+#                yum install -y kmod-lustre-client lustre-client
+#            elif [[ $kernel == *"3.10.0-1127"*$machine ]]; then
+#                wget https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-rpm-public-key.asc -O /tmp/fsx-rpm-public-key.asc
+#                rpm --import /tmp/fsx-rpm-public-key.asc
+#                wget https://fsx-lustre-client-repo.s3.amazonaws.com/el/7/fsx-lustre-client.repo -O /etc/yum.repos.d/aws-fsx.repo
+#                sed -i 's#7#7.8#' /etc/yum.repos.d/aws-fsx.repo
+#                yum clean all
+#                yum install -y kmod-lustre-client lustre-client
+#            elif [[ $kernel == *"3.10.0-1160"*$machine ]]; then
+#                wget https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-rpm-public-key.asc -O /tmp/fsx-rpm-public-key.asc
+#                rpm --import /tmp/fsx-rpm-public-key.asc
+#                wget https://fsx-lustre-client-repo.s3.amazonaws.com/el/7/fsx-lustre-client.repo -O /etc/yum.repos.d/aws-fsx.repo
+#                yum clean all
+#                yum install -y kmod-lustre-client lustre-client
+#            elif [[ $kernel == *"4.18.0-193"*$machine ]]; then
+#                # FSX for Lustre on aarch64 is supported only on 4.18.0-193
+#                wget https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-rpm-public-key.asc -O /tmp/fsx-rpm-public-key.asc
+#                rpm --import /tmp/fsx-rpm-public-key.asc
+#                wget https://fsx-lustre-client-repo.s3.amazonaws.com/centos/7/fsx-lustre-client.repo -O /etc/yum.repos.d/aws-fsx.repo
+#                yum clean all
+#                yum install -y kmod-lustre-client lustre-client
+#            else
+#                echo "ERROR: Can't install FSx for Lustre client as kernel version: $kernel isn't matching expected versions: (x86_64: 3.10.0-957, -1062, -1127, -1160, aarch64: 4.18.0-193)!"
+#            fi
+#        fi
+#    fi
+#fi
 
 AWS=$(command -v aws)
 if [[ "$FS_DATA_PROVIDER" == "efs" ]]; then
@@ -143,108 +143,108 @@ do
     mount -a
 done
 
-# Exit if folder already exist
-if [[ -d "/apps/soca/$SOCA_CONFIGURATION" ]]; then
-  echo "/apps/soca/$SOCA_CONFIGURATION folder already exist. To prevent configuration overwrite, we exit the script. Please pick a different SOCA cluster name or delete the folder"
-  exit 1
-fi
+## Exit if folder already exist
+#if [[ -d "/apps/soca/$SOCA_CONFIGURATION" ]]; then
+#  echo "/apps/soca/$SOCA_CONFIGURATION folder already exist. To prevent configuration overwrite, we exit the script. Please pick a different SOCA cluster name or delete the folder"
+#  exit 1
+#fi
 
 # Install Python if needed
-PYTHON_INSTALLED_VERS=$(/apps/soca/$SOCA_CONFIGURATION/python/latest/bin/python3 --version | awk {'print $NF'})
-if [[ "$PYTHON_INSTALLED_VERS" != "$PYTHON_VERSION" ]]; then
-    echo "Python not detected, installing"
-    mkdir -p /apps/soca/$SOCA_CONFIGURATION/python/installer
-    cd /apps/soca/$SOCA_CONFIGURATION/python/installer
-    wget $PYTHON_URL
-    if [[ $(md5sum $PYTHON_TGZ | awk '{print $1}') != $PYTHON_HASH ]];  then
-        echo -e "FATAL ERROR: Checksum for Python failed. File may be compromised." > /etc/motd
-        exit 1
-    fi
-    tar xvf $PYTHON_TGZ
-    cd Python-$PYTHON_VERSION
-    ./configure LDFLAGS="-L/usr/lib64/openssl" CPPFLAGS="-I/usr/include/openssl" -enable-loadable-sqlite-extensions --prefix=/apps/soca/$SOCA_CONFIGURATION/python/$PYTHON_VERSION
-    make
-    make install
-    ln -sf /apps/soca/$SOCA_CONFIGURATION/python/$PYTHON_VERSION /apps/soca/$SOCA_CONFIGURATION/python/latest
-else
-    echo "Python already installed and at correct version."
-fi
-
-# Install OpenPBS if needed
-cd ~
-OPENPBS_INSTALLED_VERS=$(/opt/pbs/bin/qstat --version | awk {'print $NF'})
-if [[ "$OPENPBS_INSTALLED_VERS" != "$OPENPBS_VERSION" ]]; then
-    echo "OpenPBS Not Detected, Installing OpenPBS ..."
-    cd ~
-    wget $OPENPBS_URL
-    if [[ $(md5sum $OPENPBS_TGZ | awk '{print $1}') != $OPENPBS_HASH ]];  then
-        echo -e "FATAL ERROR: Checksum for OpenPBS failed. File may be compromised." > /etc/motd
-        exit 1
-    fi
-    tar zxvf $OPENPBS_TGZ
-    cd openpbs-$OPENPBS_VERSION
-    ./autogen.sh
-    ./configure --prefix=/opt/pbs
-    make -j6
-    make install -j6
-    /opt/pbs/libexec/pbs_postinstall
-    chmod 4755 /opt/pbs/sbin/pbs_iff /opt/pbs/sbin/pbs_rcp
-else
-    echo "OpenPBS already installed, and at correct version."
-    echo "PBS_SERVER=$SERVER_HOSTNAME_ALT
-PBS_START_SERVER=1
-PBS_START_SCHED=1
-PBS_START_COMM=1
-PBS_START_MOM=0
-PBS_EXEC=/opt/pbs
-PBS_HOME=/var/spool/pbs
-PBS_CORE_LIMIT=unlimited
-PBS_SCP=/usr/bin/scp
-" > /etc/pbs.conf
-    echo "$clienthost $SERVER_HOSTNAME_ALT" > /var/spool/pbs/mom_priv/config
-fi
+#PYTHON_INSTALLED_VERS=$(/apps/soca/$SOCA_CONFIGURATION/python/latest/bin/python3 --version | awk {'print $NF'})
+#if [[ "$PYTHON_INSTALLED_VERS" != "$PYTHON_VERSION" ]]; then
+#    echo "Python not detected, installing"
+#    mkdir -p /apps/soca/$SOCA_CONFIGURATION/python/installer
+#    cd /apps/soca/$SOCA_CONFIGURATION/python/installer
+#    wget $PYTHON_URL
+#    if [[ $(md5sum $PYTHON_TGZ | awk '{print $1}') != $PYTHON_HASH ]];  then
+#        echo -e "FATAL ERROR: Checksum for Python failed. File may be compromised." > /etc/motd
+#        exit 1
+#    fi
+#    tar xvf $PYTHON_TGZ
+#    cd Python-$PYTHON_VERSION
+#    ./configure LDFLAGS="-L/usr/lib64/openssl" CPPFLAGS="-I/usr/include/openssl" -enable-loadable-sqlite-extensions --prefix=/apps/soca/$SOCA_CONFIGURATION/python/$PYTHON_VERSION
+#    make
+#    make install
+#    ln -sf /apps/soca/$SOCA_CONFIGURATION/python/$PYTHON_VERSION /apps/soca/$SOCA_CONFIGURATION/python/latest
+#else
+#    echo "Python already installed and at correct version."
+#fi
+ln -sf /usr/local/bin/python3.7 /apps/soca/$SOCA_CONFIGURATION/python/latest
+## Install OpenPBS if needed
+#cd ~
+#OPENPBS_INSTALLED_VERS=$(/opt/pbs/bin/qstat --version | awk {'print $NF'})
+#if [[ "$OPENPBS_INSTALLED_VERS" != "$OPENPBS_VERSION" ]]; then
+#    echo "OpenPBS Not Detected, Installing OpenPBS ..."
+#    cd ~
+#    wget $OPENPBS_URL
+#    if [[ $(md5sum $OPENPBS_TGZ | awk '{print $1}') != $OPENPBS_HASH ]];  then
+#        echo -e "FATAL ERROR: Checksum for OpenPBS failed. File may be compromised." > /etc/motd
+#        exit 1
+#    fi
+#    tar zxvf $OPENPBS_TGZ
+#    cd openpbs-$OPENPBS_VERSION
+#    ./autogen.sh
+#    ./configure --prefix=/opt/pbs
+#    make -j6
+#    make install -j6
+#    /opt/pbs/libexec/pbs_postinstall
+#    chmod 4755 /opt/pbs/sbin/pbs_iff /opt/pbs/sbin/pbs_rcp
+#else
+#    echo "OpenPBS already installed, and at correct version."
+#    echo "PBS_SERVER=$SERVER_HOSTNAME_ALT
+#PBS_START_SERVER=1
+#PBS_START_SCHED=1
+#PBS_START_COMM=1
+#PBS_START_MOM=0
+#PBS_EXEC=/opt/pbs
+#PBS_HOME=/var/spool/pbs
+#PBS_CORE_LIMIT=unlimited
+#PBS_SCP=/usr/bin/scp
+#" > /etc/pbs.conf
+#    echo "$clienthost $SERVER_HOSTNAME_ALT" > /var/spool/pbs/mom_priv/config
+#fi
 
 
 # Edit path with new scheduler/python locations
-echo "export PATH=\"/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/opt/pbs/bin:/opt/pbs/sbin:/opt/pbs/bin:/apps/soca/$SOCA_CONFIGURATION/python/latest/bin\"" >> /etc/environment
+echo "export PATH=\"/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/opt/pbs/bin:/opt/pbs/sbin:/opt/pbs/bin\"" >> /etc/environment
 
-# Default AWS Resources
-cat <<EOF >>/var/spool/pbs/server_priv/resourcedef
-anonymous_metrics type=string
-asg_spotfleet_id type=string
-availability_zone type=string
-base_os type=string
-compute_node type=string flag=h
-efa_support type=string
-error_message type=string
-force_ri type=string
-fsx_lustre type=string
-fsx_lustre_deployment_type type=string
-fsx_lustre_per_unit_throughput type=string
-fsx_lustre_size type=string
-ht_support type=string
-instance_profile type=string
-instance_ami type=string
-instance_id type=string
-instance_type type=string
-instance_type_used type=string
-keep_ebs type=string
-placement_group type=string
-root_size type=string
-scratch_iops type=string
-scratch_size type=string
-security_groups type=string
-spot_allocation_count type=string
-spot_allocation_strategy type=string
-spot_price type=string
-stack_id type=string
-subnet_id type=string
-system_metrics type=string
-EOF
-
-systemctl enable pbs
-systemctl start pbs
-
+## Default AWS Resources
+#cat <<EOF >>/var/spool/pbs/server_priv/resourcedef
+#anonymous_metrics type=string
+#asg_spotfleet_id type=string
+#availability_zone type=string
+#base_os type=string
+#compute_node type=string flag=h
+#efa_support type=string
+#error_message type=string
+#force_ri type=string
+#fsx_lustre type=string
+#fsx_lustre_deployment_type type=string
+#fsx_lustre_per_unit_throughput type=string
+#fsx_lustre_size type=string
+#ht_support type=string
+#instance_profile type=string
+#instance_ami type=string
+#instance_id type=string
+#instance_type type=string
+#instance_type_used type=string
+#keep_ebs type=string
+#placement_group type=string
+#root_size type=string
+#scratch_iops type=string
+#scratch_size type=string
+#security_groups type=string
+#spot_allocation_count type=string
+#spot_allocation_strategy type=string
+#spot_price type=string
+#stack_id type=string
+#subnet_id type=string
+#system_metrics type=string
+#EOF
+#
+#systemctl enable pbs
+#systemctl start pbs
+#
 # Default Server config
 /opt/pbs/bin/qmgr -c "create node $SERVER_HOSTNAME_ALT"
 /opt/pbs/bin/qmgr -c "set node $SERVER_HOSTNAME_ALT queue = workq"
@@ -452,54 +452,54 @@ ldap_sudo_smart_refresh_interval=3600
   systemctl restart sssd
 fi
 
-# Disable SELINUX
-sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
-
-# Disable StrictHostKeyChecking
-echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
-echo "UserKnownHostsFile /dev/null" >> /etc/ssh/ssh_config
-
-# Install Python required libraries
-# Source environment to reload path for Python3
-/apps/soca/$SOCA_CONFIGURATION/python/$PYTHON_VERSION/bin/pip3 install -i https://mirrors.aliyun.com/pypi/simple/ -r /root/requirements.txt
-
-# Configure Chrony
-yum remove -y ntp
-mv /etc/chrony.conf  /etc/chrony.conf.original
-echo -e """
-# use the local instance NTP service, if available
-server 169.254.169.123 prefer iburst minpoll 4 maxpoll 4
-
-# Use public servers from the pool.ntp.org project.
-# Please consider joining the pool (http://www.pool.ntp.org/join.html).
-# !!! [BEGIN] SOCA REQUIREMENT
-# You will need to open UDP egress traffic on your security group if you want to enable public pool
-#pool 2.amazon.pool.ntp.org iburst
-# !!! [END] SOCA REQUIREMENT
-# Record the rate at which the system clock gains/losses time.
-driftfile /var/lib/chrony/drift
-
-# Allow the system clock to be stepped in the first three updates
-# if its offset is larger than 1 second.
-makestep 1.0 3
-
-# Specify file containing keys for NTP authentication.
-keyfile /etc/chrony.keys
-
-# Specify directory for log files.
-logdir /var/log/chrony
-
-# save data between restarts for fast re-load
-dumponexit
-dumpdir /var/run/chrony
-""" > /etc/chrony.conf
-systemctl enable chronyd
-
-# Disable ulimit
-echo -e "
-* hard memlock unlimited
-* soft memlock unlimited
-" >> /etc/security/limits.conf
+## Disable SELINUX
+#sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+#
+## Disable StrictHostKeyChecking
+#echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
+#echo "UserKnownHostsFile /dev/null" >> /etc/ssh/ssh_config
+#
+## Install Python required libraries
+## Source environment to reload path for Python3
+#/apps/soca/$SOCA_CONFIGURATION/python/$PYTHON_VERSION/bin/pip3 install -i https://mirrors.aliyun.com/pypi/simple/ -r /root/requirements.txt
+#
+## Configure Chrony
+#yum remove -y ntp
+#mv /etc/chrony.conf  /etc/chrony.conf.original
+#echo -e """
+## use the local instance NTP service, if available
+#server 169.254.169.123 prefer iburst minpoll 4 maxpoll 4
+#
+## Use public servers from the pool.ntp.org project.
+## Please consider joining the pool (http://www.pool.ntp.org/join.html).
+## !!! [BEGIN] SOCA REQUIREMENT
+## You will need to open UDP egress traffic on your security group if you want to enable public pool
+##pool 2.amazon.pool.ntp.org iburst
+## !!! [END] SOCA REQUIREMENT
+## Record the rate at which the system clock gains/losses time.
+#driftfile /var/lib/chrony/drift
+#
+## Allow the system clock to be stepped in the first three updates
+## if its offset is larger than 1 second.
+#makestep 1.0 3
+#
+## Specify file containing keys for NTP authentication.
+#keyfile /etc/chrony.keys
+#
+## Specify directory for log files.
+#logdir /var/log/chrony
+#
+## save data between restarts for fast re-load
+#dumponexit
+#dumpdir /var/run/chrony
+#""" > /etc/chrony.conf
+#systemctl enable chronyd
+#
+## Disable ulimit
+#echo -e "
+#* hard memlock unlimited
+#* soft memlock unlimited
+#" >> /etc/security/limits.conf
 
 # Reboot to ensure SELINUX is disabled
 # Note: Upon reboot, SchedulerPostReboot.sh script will be executed and will finalize scheduler configuration

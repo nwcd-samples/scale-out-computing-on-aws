@@ -25,34 +25,34 @@ Please wait ~30 minutes as SOCA is being installed.
 Once cluster is ready to use, this message will be replaced automatically and you will be able to SSH.
 *********************************************************" > /etc/nologin
 
-if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]] || [[ "$SOCA_BASE_OS" == "rhel7" ]]; then
-    usermod --shell /usr/sbin/nologin ec2-user
-fi
-
-if [[ "%%BASE_OS%%" == "centos7" ]]; then
-    # Install SSM
-    yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
-    systemctl enable amazon-ssm-agent
-    systemctl restart amazon-ssm-agent
-    usermod --shell /usr/sbin/nologin ec2-user
-    curl -o /etc/yum.repos.d/CentOS-Base.repo $CENTOS_CHINA_REPO
+#if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]] || [[ "$SOCA_BASE_OS" == "rhel7" ]]; then
+#    usermod --shell /usr/sbin/nologin ec2-user
+#fi
+#
+#if [[ "%%BASE_OS%%" == "centos7" ]]; then
+#    # Install SSM
+#    yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+#    systemctl enable amazon-ssm-agent
+#    systemctl restart amazon-ssm-agent
 #    usermod --shell /usr/sbin/nologin centos
-fi
-
-# Install awscli
-if [[ "$SOCA_BASE_OS" == "centos7" ]] || [[ "$SOCA_BASE_OS" == "rhel7" ]]; then
-  yum install -y python3-pip
-  PIP=$(which pip3)
-  $PIP install -i https://mirrors.aliyun.com/pypi/simple/ awscli
-  export PATH=$PATH:/usr/local/bin
-fi
-
-# Disable automatic motd update if using ALI
-if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]]; then
-  /usr/sbin/update-motd --disable
-  rm /etc/cron.d/update-motd
-  rm -f /etc/update-motd.d/*
-fi
+#    curl -o /etc/yum.repos.d/CentOS-Base.repo $CENTOS_CHINA_REPO
+#    usermod --shell /usr/sbin/nologin centos
+#fi
+#
+## Install awscli
+#if [[ "$SOCA_BASE_OS" == "centos7" ]] || [[ "$SOCA_BASE_OS" == "rhel7" ]]; then
+#  yum install -y python3-pip
+#  PIP=$(which pip3)
+#  $PIP install -i https://mirrors.aliyun.com/pypi/simple/ awscli
+#  export PATH=$PATH:/usr/local/bin
+#fi
+#
+## Disable automatic motd update if using ALI
+#if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]]; then
+#  /usr/sbin/update-motd --disable
+#  rm /etc/cron.d/update-motd
+#  rm -f /etc/update-motd.d/*
+#fi
 
 {
   echo "## [BEGIN] SOCA Configuration - Do Not Delete"

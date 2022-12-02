@@ -91,6 +91,7 @@ Config:
   china:
     pip_china_mirror: "https://opentuna.cn/pypi/web/simple" # pip China mirror site
     centos_china_repo: "https://soca-china-deployment.s3.cn-northwest-1.amazonaws.com.cn/scale-out-computing-on-aws/v2.7.0/CentOS-Base-china.repo" # centos China mirror repo file
+    resource_bucket: "s3://nwcd-soca-2.7.2"
 
 RegionMap:
   af-south-1:
