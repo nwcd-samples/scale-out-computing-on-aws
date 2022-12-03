@@ -436,23 +436,23 @@ Cluster: $SOCA_CONFIGURATION
 " > /etc/motd
 
 
-# Clean directories
-rm -rf /root/openpbs-${OPENPBS_VERSION} /root/${OPENPBS_TGZ}
-
-# Install OpenMPI under /apps/openmpi/<openmpi_version>
-# This will take a while and is not system blocking, so adding at the end of the install process
-mkdir -p /apps/soca/$SOCA_CONFIGURATION/openmpi/installer
-mkdir -p /apps/openmpi
-cd /apps/soca/$SOCA_CONFIGURATION/openmpi/installer
-
-wget "$OPENMPI_URL"
-if [[ $(md5sum "$OPENMPI_TGZ" | awk '{print $1}') != "$OPENMPI_HASH" ]];  then
-    echo -e "FATAL ERROR: Checksum for OpenMPI failed. File may be compromised." > /etc/motd
-    exit 1
-fi
-
-tar xvf "$OPENMPI_TGZ"
-cd openmpi-"$OPENMPI_VERSION"
-./configure --prefix="/apps/openmpi/$OPENMPI_VERSION"
-make
-make install
+## Clean directories
+#rm -rf /root/openpbs-${OPENPBS_VERSION} /root/${OPENPBS_TGZ}
+#
+## Install OpenMPI under /apps/openmpi/<openmpi_version>
+## This will take a while and is not system blocking, so adding at the end of the install process
+#mkdir -p /apps/soca/$SOCA_CONFIGURATION/openmpi/installer
+#mkdir -p /apps/openmpi
+#cd /apps/soca/$SOCA_CONFIGURATION/openmpi/installer
+#
+#wget "$OPENMPI_URL"
+#if [[ $(md5sum "$OPENMPI_TGZ" | awk '{print $1}') != "$OPENMPI_HASH" ]];  then
+#    echo -e "FATAL ERROR: Checksum for OpenMPI failed. File may be compromised." > /etc/motd
+#    exit 1
+#fi
+#
+#tar xvf "$OPENMPI_TGZ"
+#cd openmpi-"$OPENMPI_VERSION"
+#./configure --prefix="/apps/openmpi/$OPENMPI_VERSION"
+#make
+#make install
