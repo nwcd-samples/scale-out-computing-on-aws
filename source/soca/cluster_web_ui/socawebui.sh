@@ -19,7 +19,8 @@
 ##
 
 source /etc/environment
-UWSGI_BIN="/apps/soca/$SOCA_CONFIGURATION/python/latest/bin/uwsgi"
+#UWSGI_BIN="/apps/soca/$SOCA_CONFIGURATION/python/latest/bin/uwsgi"
+UWSGI_BIN="/usr/local/bin/uwsgi"
 UWSGI_BIND='0.0.0.0:8443'
 
 UWSGI_PROCESSES=5

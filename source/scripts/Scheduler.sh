@@ -169,7 +169,10 @@ done
 #else
 #    echo "Python already installed and at correct version."
 #fi
-ln -sf /usr/local/bin/python3.7 /apps/soca/$SOCA_CONFIGURATION/python/latest
+#if [[ ! -d /apps/soca/$SOCA_CONFIGURATION/python ]];then
+#  mkdir -p /apps/soca/$SOCA_CONFIGURATION/python
+#fi
+#ln -sf /usr/local/bin /apps/soca/$SOCA_CONFIGURATION/python/latest
 ## Install OpenPBS if needed
 #cd ~
 #OPENPBS_INSTALLED_VERS=$(/opt/pbs/bin/qstat --version | awk {'print $NF'})
@@ -191,16 +194,16 @@ ln -sf /usr/local/bin/python3.7 /apps/soca/$SOCA_CONFIGURATION/python/latest
 #    chmod 4755 /opt/pbs/sbin/pbs_iff /opt/pbs/sbin/pbs_rcp
 #else
 #    echo "OpenPBS already installed, and at correct version."
-#    echo "PBS_SERVER=$SERVER_HOSTNAME_ALT
-#PBS_START_SERVER=1
-#PBS_START_SCHED=1
-#PBS_START_COMM=1
-#PBS_START_MOM=0
-#PBS_EXEC=/opt/pbs
-#PBS_HOME=/var/spool/pbs
-#PBS_CORE_LIMIT=unlimited
-#PBS_SCP=/usr/bin/scp
-#" > /etc/pbs.conf
+echo "PBS_SERVER=$SERVER_HOSTNAME_ALT
+PBS_START_SERVER=1
+PBS_START_SCHED=1
+PBS_START_COMM=1
+PBS_START_MOM=0
+PBS_EXEC=/opt/pbs
+PBS_HOME=/var/spool/pbs
+PBS_CORE_LIMIT=unlimited
+PBS_SCP=/usr/bin/scp
+" > /etc/pbs.conf
 #    echo "$clienthost $SERVER_HOSTNAME_ALT" > /var/spool/pbs/mom_priv/config
 #fi
 
@@ -242,8 +245,9 @@ echo "export PATH=\"/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 #system_metrics type=string
 #EOF
 #
-#systemctl enable pbs
-#systemctl start pbs
+# make sure pbs is disabled in AMI
+systemctl enable pbs
+systemctl start pbs
 #
 # Default Server config
 /opt/pbs/bin/qmgr -c "create node $SERVER_HOSTNAME_ALT"
