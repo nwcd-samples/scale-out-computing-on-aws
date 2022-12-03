@@ -126,13 +126,26 @@ class FindExistingResource:
                     token = False
 
                 for directory in all_ds["DirectoryDescriptions"]:
-                    if directory["VpcSettings"]["VpcId"] == vpc_id:
-                        ds[count] = {"id": directory["DirectoryId"],
-                                     "name": directory["Name"],
-                                     "netbios": directory["ShortName"],
-                                     "dns": directory["DnsIpAddrs"],
-                                     "description": f"{directory['Name']} (Domain: {directory['ShortName']}, Id: {directory['DirectoryId']})"}
-                        count += 1
+                    if directory["Type"] == "MicrosoftAD" or directory["Type"] == "SimpleAD":
+                        if directory["VpcSettings"]["VpcId"] == vpc_id:
+                            ds[count] = {"id": directory["DirectoryId"],
+                                         "name": directory["Name"],
+                                         "netbios": directory["ShortName"],
+                                         "dns": directory["DnsIpAddrs"],
+                                         "type": directory["Type"],
+                                         "description": f"{directory['Name']} (Domain: {directory['ShortName']}, Id: {directory['DirectoryId']}, Type: {directory['Type']})"}
+                            count += 1
+                    elif directory["Type"] == "ADConnector":
+                        if directory["ConnectSettings"]["VpcId"] == vpc_id:
+                            ds[count] = {"id": directory["DirectoryId"],
+                                         "name": directory["Name"],
+                                         "netbios": directory["ShortName"],
+                                         "dns": directory["DnsIpAddrs"],
+                                         "type": directory["Type"],
+                                         "description": f"{directory['Name']} (Domain: {directory['ShortName']}, Id: {directory['DirectoryId']}, Type: {directory['Type']})"}
+                            count += 1
+                    else:
+                        print(f"Ignore unsupported directory type {directory['Type']} for {directory['DirectoryId']}")
             [print("    {:2} > {}".format(key, value["description"])) for key, value in ds.items()]
             allowed_choices = list(ds.keys())
             choice = get_input(f"Choose the directory you want to use?", None, allowed_choices, int)

@@ -81,7 +81,8 @@ class SOCAInstall(cdk.Stack):
             "compute_node_role": None,
             "compute_node_sg": None,
             "directory_service": None,
-            "ami_id": user_specified_variables.custom_ami if user_specified_variables.custom_ami else install_props.RegionMap.__dict__[user_specified_variables.region].__dict__[user_specified_variables.base_os],
+            # customized compute node ami id
+            "ami_id": None,
             "es_custom_resource": None,
             "es_domain": None,
             "fs_apps": None,
@@ -102,6 +103,7 @@ class SOCAInstall(cdk.Stack):
 
         # Create SOCA environment
         self.generic_resources()
+        self.compute_ami_id()
         self.network()  # Create Network environment
         self.security_groups()  # Create Security Groups
         self.iam_roles()  # Create IAM roles and policies for primary roles needed to deploy resources
@@ -141,6 +143,14 @@ class SOCAInstall(cdk.Stack):
                 resources=['*']
             )
         )
+
+    def compute_ami_id(self):
+        if not user_specified_variables.custom_ami:
+            self.soca_resources["ami_id"] = install_props.RegionMap.compute_node_ami \
+              .__dict__[user_specified_variables.region] \
+              .__dict__[user_specified_variables.base_os]
+        else:
+            self.soca_resources["ami_id"] = user_specified_variables.custom_ami
 
     def network(self):
         """
@@ -457,8 +467,10 @@ class SOCAInstall(cdk.Stack):
 
     def directory_service(self):
         """
-        Deploy an AWS Manage AD Directory Service
+        Deploy an AWS Manage AD Directory Service or connect existing AD
+        Due to ADConnector type DS does not need create
         """
+
         if not user_specified_variables.vpc_id:
             launch_subnets = [self.soca_resources["vpc"].private_subnets[0].subnet_id,
                               self.soca_resources["vpc"].private_subnets[1].subnet_id]
@@ -468,8 +480,6 @@ class SOCAInstall(cdk.Stack):
 
         # Create a new AWS Directory Service Managed AD
         if not user_specified_variables.directory_service_id:
-            # core.CfnOutput(self, "directory_service_id",
-            #                value="Installing SOCA with new created AWS AD")
             self.soca_resources["ds_domain_admin"] = "Admin"
             self.soca_resources["ds_domain_admin_password"] = f"{random.choice(string.ascii_lowercase)}{random.choice(string.digits)}{random.choice(string.ascii_uppercase)}{''.join(random.choice(string.ascii_lowercase + string.digits + string.ascii_uppercase) for i in range(20))}"
             self.soca_resources["directory_service"] = ds.CfnMicrosoftAD(self, "DSManagedAD", name=install_props.Config.directoryservice.activedirectory.name,
@@ -480,15 +490,13 @@ class SOCAInstall(cdk.Stack):
             self.soca_resources["ds_domain_primary_dns"] = core.Fn.select(0, self.soca_resources["directory_service"].attr_dns_ip_addresses)
             self.soca_resources["ds_domain_secondary_dns"] = core.Fn.select(1, self.soca_resources["directory_service"].attr_dns_ip_addresses)
             self.soca_resources["ds_domain_name"] = install_props.Config.directoryservice.activedirectory.name
+            self.soca_resources["ds_type"] = "MicrosoftAD"
         else:
-            # core.CfnOutput(self, "directory_service_id",
-            #                value=f"Installing SOCA with existed AD {user_specified_variables.directory_service_id}")
+            self.soca_resources["ds_type"] = user_specified_variables.directory_service_type
             self.soca_resources["ds_domain_primary_dns"] = user_specified_variables.directory_service_primary_dns
             self.soca_resources["ds_domain_secondary_dns"] = user_specified_variables.directory_service_secondary_dns
             self.soca_resources["ds_domain_name"] = user_specified_variables.directory_service_name
 
-        # core.CfnOutput(self, "self.soca_resources[\"ds_domain_primary_dns\"]", value=self.soca_resources["ds_domain_primary_dns"])
-        # core.CfnOutput(self, "self.soca_resources[\"ds_domain_secondary_dns\"]", value=self.soca_resources["ds_domain_secondary_dns"])
         # Create DNS Forwarder. Requests sent to AD will be forwarded to AD DNS
         # Other requests will remain the same. Do not create custom DHCP Option Set otherwise resources such as FSx or EFS won't resolve
         resolver = route53resolver.CfnResolverEndpoint(self, "ADRoute53OutboundResolver", direction="OUTBOUND",
@@ -730,8 +738,8 @@ class SOCAInstall(cdk.Stack):
         if not user_specified_variables.fs_data:
             self.soca_resources["scheduler_instance"].node.add_dependency(self.soca_resources["fs_data"])
 
-        # ssh_user = "centos" if user_specified_variables.base_os == "centos7" else "ec2-user"
-        ssh_user = "ec2-user"
+        ssh_user = "centos" if user_specified_variables.base_os == "centos7" else "ec2-user"
+        # ssh_user = "ec2-user"
 
         if install_props.Config.entry_points_subnets.lower() == "public":
             # Associate the EIP to the scheduler instance
@@ -826,6 +834,7 @@ class SOCAInstall(cdk.Stack):
                 secret["DSServiceAccountUsername"] = "false"
                 secret["DSServiceAccountPassword"] = "false"
                 secret["DSResetLambdaFunctionArn"] = self.soca_resources["reset_ds_lambda"].function_arn
+                secret["DSType"] = self.soca_resources["ds_type"]
             else:
                 # OpenLDAP
                 secret["LdapName"] = install_props.Config.directoryservice.openldap.name
@@ -842,6 +851,9 @@ class SOCAInstall(cdk.Stack):
             secret["DSDomainSecondaryDNS"] = self.soca_resources["ds_domain_secondary_dns"]
             secret["DSServiceAccountUsername"] = "false"
             secret["DSServiceAccountPassword"] = "false"
+            # please warn this will change AD account password
+            secret["DSResetLambdaFunctionArn"] = self.soca_resources["reset_ds_lambda"].function_arn
+            secret["DSType"] = self.soca_resources["ds_type"]
 
         self.soca_resources["soca_config"] = secretsmanager.CfnSecret(self, "SOCASecretManagerSecret",
                                                                       description=f"Store SOCA configuration for cluster {user_specified_variables.cluster_id}",
@@ -1058,6 +1070,7 @@ if __name__ == "__main__":
         "directory_service_id": app.node.try_get_context("directory_service_id"),
         "directory_service_primary_dns": app.node.try_get_context("directory_service_primary_dns"),
         "directory_service_secondary_dns": app.node.try_get_context("directory_service_secondary_dns"),
+        "directory_service_type": app.node.try_get_context("directory_service_type"),
         "es_endpoint": app.node.try_get_context("es_endpoint"),
         "ldap_host": app.node.try_get_context("ldap_host"),
         "compute_node_role_name": app.node.try_get_context("compute_node_role_name"),

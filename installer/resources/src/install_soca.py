@@ -349,6 +349,7 @@ def get_install_parameters():
                     install_parameters["directory_service_name"] = directory_service["message"]["name"]
                     install_parameters["directory_service_primary_dns"] = directory_service["message"]["dns"][0]
                     install_parameters["directory_service_secondary_dns"] = directory_service["message"]["dns"][1]
+                    install_parameters["directory_service_type"] = directory_service["message"]["type"]
                 else:
                     print(f"{fg('red')}Error: {directory_service['message']} {attr('reset')}")
                     sys.exit(1)
@@ -558,6 +559,8 @@ if __name__ == "__main__":
         "directory_service_id": None,
         "directory_service_primary_dns": None,
         "directory_service_secondary_dns": None,
+        # MicrosoftAD or ADConnector
+        "directory_service_type": None,
         # EC2 Security Groups
         "compute_node_sg": None,
         "scheduler_sg": None,

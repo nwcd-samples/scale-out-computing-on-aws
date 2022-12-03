@@ -185,6 +185,7 @@ class Config(object):
         ROOT_PW = soca_config["DSDomainAdminPassword"]
         LDAP_BASE = soca_config["DSDomainBase"]
         NETBIOS = soca_config["DSDomainNetbios"]
+        # if soca_config["DSType"] !=
         DIRECTORY_SERVICE_RESET_LAMBDA_ARN = soca_config["DSResetLambdaFunctionArn"]
         SUDOERS_GROUP = "AWS Delegated Administrators"
         SUDOERS_GROUP_DN = f"CN={SUDOERS_GROUP},OU=AWS Delegated Groups,{LDAP_BASE}"

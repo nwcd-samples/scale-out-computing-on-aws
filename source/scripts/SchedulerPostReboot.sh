@@ -156,7 +156,7 @@ openssl req -new -newkey rsa:4096 -days 3650 -nodes -x509 \
     -keyout cert.key -out cert.crt
 
 # Wait for PBS to restart
-sleep 60
+#sleep 60
 
 ## Update PBS Hooks with the current script location
 sed -i "s/%SOCA_CONFIGURATION/$SOCA_CONFIGURATION/g" /apps/soca/$SOCA_CONFIGURATION/cluster_hooks/queuejob/check_queue_acls.py
@@ -328,28 +328,28 @@ fi
 IFS="-" read name sanitized_cluster_name <<< "echo $SOCA_CONFIGURATION"
 sed -i "s/__SOCA_CLUSTER__NAME__/$sanitized_cluster_name/g" /apps/soca/$SOCA_CONFIGURATION/cluster_web_ui/templates/common/horizontal_menu_bar.html
 
-# Install NodeJS/NPM if needed
-if [[ ! $(command -v npm) ]];
-then
-  echo "npm not detected, installing it ... "
-  export NVM_DIR="/root/nvm/$(date +%s)/.nvm"
-  export NVM_NODEJS_ORG_MIRROR=https://npm.taobao.org/mirrors/node/
-  mkdir -p $NVM_DIR
-  echo "Downloading $NVM_URL"
-  wget "$NVM_URL"
-  if [[ $(md5sum $NVM_INSTALL_SCRIPT | awk '{print $1}') != $NVM_HASH ]];  then
-        echo -e "FATAL ERROR: Checksum for NVM failed. File may be compromised." > /etc/motd
-        exit 1
-  fi
-  chmod +x $NVM_INSTALL_SCRIPT
-  /bin/bash $NVM_INSTALL_SCRIPT
-  source "$NVM_DIR/nvm.sh"  # This loads nvm
-  # shellcheck disable=SC1090
-  source "$NVM_DIR/bash_completion"
-  nvm install v8.7.0
-fi
-# Install required Node module
-npm install --prefix /apps/soca/"$SOCA_CONFIGURATION"/cluster_web_ui/static --registry https://registry.npm.taobao.org monaco-editor@0.24.0
+## Install NodeJS/NPM if needed
+#if [[ ! $(command -v npm) ]];
+#then
+#  echo "npm not detected, installing it ... "
+#  export NVM_DIR="/root/nvm/$(date +%s)/.nvm"
+#  export NVM_NODEJS_ORG_MIRROR=https://npm.taobao.org/mirrors/node/
+#  mkdir -p $NVM_DIR
+#  echo "Downloading $NVM_URL"
+#  wget "$NVM_URL"
+#  if [[ $(md5sum $NVM_INSTALL_SCRIPT | awk '{print $1}') != $NVM_HASH ]];  then
+#        echo -e "FATAL ERROR: Checksum for NVM failed. File may be compromised." > /etc/motd
+#        exit 1
+#  fi
+#  chmod +x $NVM_INSTALL_SCRIPT
+#  /bin/bash $NVM_INSTALL_SCRIPT
+#  source "$NVM_DIR/nvm.sh"  # This loads nvm
+#  # shellcheck disable=SC1090
+#  source "$NVM_DIR/bash_completion"
+#  nvm install v8.7.0
+#fi
+## Install required Node module
+#npm install --prefix /apps/soca/"$SOCA_CONFIGURATION"/cluster_web_ui/static --registry https://registry.npm.taobao.org monaco-editor@0.24.0
 
 # Start Web UI
 chmod +x /apps/soca/"$SOCA_CONFIGURATION"/cluster_web_ui/socawebui.sh
@@ -375,24 +375,22 @@ curl -k -H "X-SOCA-TOKEN: $admin_api_key" \
  -X POST https://127.0.0.1:8443/api/ldap/user >> /root/create_new_user.log 2>&1
 
 # Re-enable access
-#if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]] || [[ "$SOCA_BASE_OS" == "rhel7" ]]; then
-#     usermod --shell /bin/bash ec2-user
-#fi
-#
-#if [[ "$SOCA_BASE_OS" == "centos7" ]]; then
-#     usermod --shell /bin/bash ec2-user
-#fi
-usermod --shell /bin/bash ec2-user
+if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]] || [[ "$SOCA_BASE_OS" == "rhel7" ]]; then
+     usermod --shell /bin/bash ec2-user
+fi
+
+if [[ "$SOCA_BASE_OS" == "centos7" ]]; then
+     usermod --shell /bin/bash centos
+fi
 
 # Avoid customer to use system account to submit job
-#if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]] || [[ "$SOCA_BASE_OS" == "rhel7" ]]; then
-#    echo "alias qsub='echo -e \" !!!! Do not submit job with system account. \n\n Please use LDAP account instead. !!!! \"'" >> /home/ec2-user/.bash_profile
-#fi
-#
-#if [[ "$SOCA_BASE_OS" == "centos7" ]]; then
-#    echo "alias qsub='echo -e \" !!!! Do not submit job with system account. \n\n Please use LDAP account instead. !!!! \"'" >> /home/centos/.bash_profile
-#fi
-echo "alias qsub='echo -e \" !!!! Do not submit job with system account. \n\n Please use LDAP account instead. !!!! \"'" >> /home/ec2-user/.bash_profile
+if [[ "$SOCA_BASE_OS" == "amazonlinux2" ]] || [[ "$SOCA_BASE_OS" == "rhel7" ]]; then
+    echo "alias qsub='echo -e \" !!!! Do not submit job with system account. \n\n Please use LDAP account instead. !!!! \"'" >> /home/ec2-user/.bash_profile
+fi
+
+if [[ "$SOCA_BASE_OS" == "centos7" ]]; then
+    echo "alias qsub='echo -e \" !!!! Do not submit job with system account. \n\n Please use LDAP account instead. !!!! \"'" >> /home/centos/.bash_profile
+fi
 
 
 # Enforce minimum permissions
@@ -438,23 +436,23 @@ Cluster: $SOCA_CONFIGURATION
 " > /etc/motd
 
 
-# Clean directories
-rm -rf /root/openpbs-${OPENPBS_VERSION} /root/${OPENPBS_TGZ}
-
-# Install OpenMPI under /apps/openmpi/<openmpi_version>
-# This will take a while and is not system blocking, so adding at the end of the install process
-mkdir -p /apps/soca/$SOCA_CONFIGURATION/openmpi/installer
-mkdir -p /apps/openmpi
-cd /apps/soca/$SOCA_CONFIGURATION/openmpi/installer
-
-wget "$OPENMPI_URL"
-if [[ $(md5sum "$OPENMPI_TGZ" | awk '{print $1}') != "$OPENMPI_HASH" ]];  then
-    echo -e "FATAL ERROR: Checksum for OpenMPI failed. File may be compromised." > /etc/motd
-    exit 1
-fi
-
-tar xvf "$OPENMPI_TGZ"
-cd openmpi-"$OPENMPI_VERSION"
-./configure --prefix="/apps/openmpi/$OPENMPI_VERSION"
-make
-make install
+## Clean directories
+#rm -rf /root/openpbs-${OPENPBS_VERSION} /root/${OPENPBS_TGZ}
+#
+## Install OpenMPI under /apps/openmpi/<openmpi_version>
+## This will take a while and is not system blocking, so adding at the end of the install process
+#mkdir -p /apps/soca/$SOCA_CONFIGURATION/openmpi/installer
+#mkdir -p /apps/openmpi
+#cd /apps/soca/$SOCA_CONFIGURATION/openmpi/installer
+#
+#wget "$OPENMPI_URL"
+#if [[ $(md5sum "$OPENMPI_TGZ" | awk '{print $1}') != "$OPENMPI_HASH" ]];  then
+#    echo -e "FATAL ERROR: Checksum for OpenMPI failed. File may be compromised." > /etc/motd
+#    exit 1
+#fi
+#
+#tar xvf "$OPENMPI_TGZ"
+#cd openmpi-"$OPENMPI_VERSION"
+#./configure --prefix="/apps/openmpi/$OPENMPI_VERSION"
+#make
+#make install
