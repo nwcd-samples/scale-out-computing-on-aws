@@ -211,40 +211,40 @@ PBS_SCP=/usr/bin/scp
 # Edit path with new scheduler/python locations
 echo "export PATH=\"/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/opt/pbs/bin:/opt/pbs/sbin:/opt/pbs/bin\"" >> /etc/environment
 
-## Default AWS Resources
-#cat <<EOF >>/var/spool/pbs/server_priv/resourcedef
-#anonymous_metrics type=string
-#asg_spotfleet_id type=string
-#availability_zone type=string
-#base_os type=string
-#compute_node type=string flag=h
-#efa_support type=string
-#error_message type=string
-#force_ri type=string
-#fsx_lustre type=string
-#fsx_lustre_deployment_type type=string
-#fsx_lustre_per_unit_throughput type=string
-#fsx_lustre_size type=string
-#ht_support type=string
-#instance_profile type=string
-#instance_ami type=string
-#instance_id type=string
-#instance_type type=string
-#instance_type_used type=string
-#keep_ebs type=string
-#placement_group type=string
-#root_size type=string
-#scratch_iops type=string
-#scratch_size type=string
-#security_groups type=string
-#spot_allocation_count type=string
-#spot_allocation_strategy type=string
-#spot_price type=string
-#stack_id type=string
-#subnet_id type=string
-#system_metrics type=string
-#EOF
-#
+# Default AWS Resources
+cat <<EOF >>/var/spool/pbs/server_priv/resourcedef
+anonymous_metrics type=string
+asg_spotfleet_id type=string
+availability_zone type=string
+base_os type=string
+compute_node type=string flag=h
+efa_support type=string
+error_message type=string
+force_ri type=string
+fsx_lustre type=string
+fsx_lustre_deployment_type type=string
+fsx_lustre_per_unit_throughput type=string
+fsx_lustre_size type=string
+ht_support type=string
+instance_profile type=string
+instance_ami type=string
+instance_id type=string
+instance_type type=string
+instance_type_used type=string
+keep_ebs type=string
+placement_group type=string
+root_size type=string
+scratch_iops type=string
+scratch_size type=string
+security_groups type=string
+spot_allocation_count type=string
+spot_allocation_strategy type=string
+spot_price type=string
+stack_id type=string
+subnet_id type=string
+system_metrics type=string
+EOF
+
 # make sure pbs is disabled in AMI
 systemctl enable pbs
 systemctl start pbs

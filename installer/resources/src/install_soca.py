@@ -748,14 +748,14 @@ if __name__ == "__main__":
 
                         while soca_check_loop <= max_check_loop: # nosec
                             if soca_check_loop == max_check_loop:
-                                print(f"{fg('yellow')}Could not determine if SOCA is ready after 20 minutes. Connect to the system via SSM and check the logs. {attr('reset')}")
+                                print(f"{fg('yellow')}Could not determine if SOCA is ready after 5 minutes. Connect to the system via SSM and check the logs. {attr('reset')}")
                                 sys.exit(1)
-                            print("SOCA not ready yet, checking again in 120 seconds ... ")
+                            print("SOCA not ready yet, checking again in 60 seconds ... ")
                             response = get(f"{output['OutputValue']}", verify=False, timeout=15)
                             print(f"response status: {response.status_code}")
                             if response.status_code == 200:
                                 break
-                            time.sleep(120)
+                            time.sleep(60)
                             soca_check_loop += 1
                         print(f"{fg('green')}SOCA is ready! Login via  {output['OutputValue']}{attr('reset')}")
 
