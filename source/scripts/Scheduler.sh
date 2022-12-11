@@ -12,7 +12,6 @@
 #  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    #
 #  and limitations under the License.                                                                                #
 ######################################################################################################################
-
 set -x
 
 source /etc/environment
@@ -209,6 +208,7 @@ PBS_SCP=/usr/bin/scp
 
 
 # Edit path with new scheduler/python locations
+# We have setup symbolic link /usr/bin/python37
 echo "export PATH=\"/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/opt/pbs/bin:/opt/pbs/sbin:/opt/pbs/bin\"" >> /etc/environment
 
 # Default AWS Resources
@@ -456,54 +456,54 @@ ldap_sudo_smart_refresh_interval=3600
   systemctl restart sssd
 fi
 
-## Disable SELINUX
-#sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
-#
-## Disable StrictHostKeyChecking
-#echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
-#echo "UserKnownHostsFile /dev/null" >> /etc/ssh/ssh_config
-#
-## Install Python required libraries
-## Source environment to reload path for Python3
+# Disable SELINUX
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+
+# Disable StrictHostKeyChecking
+echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
+echo "UserKnownHostsFile /dev/null" >> /etc/ssh/ssh_config
+
+# Install Python required libraries
+# Source environment to reload path for Python3
 #/apps/soca/$SOCA_CONFIGURATION/python/$PYTHON_VERSION/bin/pip3 install -i https://mirrors.aliyun.com/pypi/simple/ -r /root/requirements.txt
-#
-## Configure Chrony
-#yum remove -y ntp
-#mv /etc/chrony.conf  /etc/chrony.conf.original
-#echo -e """
-## use the local instance NTP service, if available
-#server 169.254.169.123 prefer iburst minpoll 4 maxpoll 4
-#
-## Use public servers from the pool.ntp.org project.
-## Please consider joining the pool (http://www.pool.ntp.org/join.html).
-## !!! [BEGIN] SOCA REQUIREMENT
-## You will need to open UDP egress traffic on your security group if you want to enable public pool
-##pool 2.amazon.pool.ntp.org iburst
-## !!! [END] SOCA REQUIREMENT
-## Record the rate at which the system clock gains/losses time.
-#driftfile /var/lib/chrony/drift
-#
-## Allow the system clock to be stepped in the first three updates
-## if its offset is larger than 1 second.
-#makestep 1.0 3
-#
-## Specify file containing keys for NTP authentication.
-#keyfile /etc/chrony.keys
-#
-## Specify directory for log files.
-#logdir /var/log/chrony
-#
-## save data between restarts for fast re-load
-#dumponexit
-#dumpdir /var/run/chrony
-#""" > /etc/chrony.conf
-#systemctl enable chronyd
-#
-## Disable ulimit
-#echo -e "
-#* hard memlock unlimited
-#* soft memlock unlimited
-#" >> /etc/security/limits.conf
+
+# Configure Chrony
+yum remove -y ntp
+mv /etc/chrony.conf  /etc/chrony.conf.original
+echo -e """
+# use the local instance NTP service, if available
+server 169.254.169.123 prefer iburst minpoll 4 maxpoll 4
+
+# Use public servers from the pool.ntp.org project.
+# Please consider joining the pool (http://www.pool.ntp.org/join.html).
+# !!! [BEGIN] SOCA REQUIREMENT
+# You will need to open UDP egress traffic on your security group if you want to enable public pool
+#pool 2.amazon.pool.ntp.org iburst
+# !!! [END] SOCA REQUIREMENT
+# Record the rate at which the system clock gains/losses time.
+driftfile /var/lib/chrony/drift
+
+# Allow the system clock to be stepped in the first three updates
+# if its offset is larger than 1 second.
+makestep 1.0 3
+
+# Specify file containing keys for NTP authentication.
+keyfile /etc/chrony.keys
+
+# Specify directory for log files.
+logdir /var/log/chrony
+
+# save data between restarts for fast re-load
+dumponexit
+dumpdir /var/run/chrony
+""" > /etc/chrony.conf
+systemctl enable chronyd
+
+# Disable ulimit
+echo -e "
+* hard memlock unlimited
+* soft memlock unlimited
+" >> /etc/security/limits.conf
 
 # Reboot to ensure SELINUX is disabled
 # Note: Upon reboot, SchedulerPostReboot.sh script will be executed and will finalize scheduler configuration

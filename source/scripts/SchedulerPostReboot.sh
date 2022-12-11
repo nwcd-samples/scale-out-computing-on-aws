@@ -182,32 +182,32 @@ qmgr -c "import hook check_licenses_mapping application/x-python default /apps/s
 
 # Reload config
 systemctl restart pbs
-
+# In customized AMI, we have setup a symbolic link from /usr/local/python37/bin/python3.7 to /usr/bin/python3
 # Create crontabs
 echo "
 ## Cluster Analytics
-* * * * * source /etc/environment; /apps/soca/$SOCA_CONFIGURATION/python/latest/bin/python3 /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/cluster_nodes_tracking.py >> /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/cluster_nodes_tracking.log 2>&1
-@hourly source /etc/environment; /apps/soca/$SOCA_CONFIGURATION/python/latest/bin/python3 /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/job_tracking.py >> /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/job_tracking.log 2>&1
-*/10 * * * * source /etc/environment; /apps/soca/$SOCA_CONFIGURATION/python/latest/bin/python3 /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/desktop_hosts_tracking.py >> /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/desktop_hosts_tracking.log 2>&1
+* * * * * source /etc/environment; /usr/bin/python37 /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/cluster_nodes_tracking.py >> /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/cluster_nodes_tracking.log 2>&1
+@hourly source /etc/environment; /usr/bin/python37 /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/job_tracking.py >> /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/job_tracking.log 2>&1
+*/10 * * * * source /etc/environment; /usr/bin/python37 /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/desktop_hosts_tracking.py >> /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/desktop_hosts_tracking.log 2>&1
 # @daily /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/download_china_pricing_index.sh > /apps/soca/$SOCA_CONFIGURATION/cluster_analytics/download_china_pricing_index.log 2>&1
 
 ## Cluster Log Management
 @daily  source /etc/environment; /bin/bash /apps/soca/$SOCA_CONFIGURATION/cluster_logs_management/send_logs_s3.sh >>/apps/soca/$SOCA_CONFIGURATION/cluster_logs_management/send_logs_s3.log 2>&1
 
 ## Cluster Management
-* * * * * source /etc/environment;  /apps/soca/$SOCA_CONFIGURATION/python/latest/bin/python3  /apps/soca/$SOCA_CONFIGURATION/cluster_manager/nodes_manager.py >> /apps/soca/$SOCA_CONFIGURATION/cluster_manager/nodes_manager.py.log 2>&1
+* * * * * source /etc/environment;  /usr/bin/python37  /apps/soca/$SOCA_CONFIGURATION/cluster_manager/nodes_manager.py >> /apps/soca/$SOCA_CONFIGURATION/cluster_manager/nodes_manager.py.log 2>&1
 
 ## Cluster Web UI
 ### Restart UI at reboot
 @reboot /apps/soca/$SOCA_CONFIGURATION/cluster_web_ui/socawebui.sh start
 
 ## Automatic Host Provisioning
-* * * * * source /etc/environment;  /apps/soca/$SOCA_CONFIGURATION/python/latest/bin/python3 /apps/soca/$SOCA_CONFIGURATION/cluster_manager/dispatcher.py -c /apps/soca/$SOCA_CONFIGURATION/cluster_manager/settings/queue_mapping.yml -t compute
-* * * * * source /etc/environment;  /apps/soca/$SOCA_CONFIGURATION/python/latest/bin/python3 /apps/soca/$SOCA_CONFIGURATION/cluster_manager/dispatcher.py -c /apps/soca/$SOCA_CONFIGURATION/cluster_manager/settings/queue_mapping.yml -t job-shared
-* * * * * source /etc/environment;  /apps/soca/$SOCA_CONFIGURATION/python/latest/bin/python3 /apps/soca/$SOCA_CONFIGURATION/cluster_manager/dispatcher.py -c /apps/soca/$SOCA_CONFIGURATION/cluster_manager/settings/queue_mapping.yml -t test
+* * * * * source /etc/environment;  /usr/bin/python37 /apps/soca/$SOCA_CONFIGURATION/cluster_manager/dispatcher.py -c /apps/soca/$SOCA_CONFIGURATION/cluster_manager/settings/queue_mapping.yml -t compute
+* * * * * source /etc/environment;  /usr/bin/python37 /apps/soca/$SOCA_CONFIGURATION/cluster_manager/dispatcher.py -c /apps/soca/$SOCA_CONFIGURATION/cluster_manager/settings/queue_mapping.yml -t job-shared
+* * * * * source /etc/environment;  /usr/bin/python37 /apps/soca/$SOCA_CONFIGURATION/cluster_manager/dispatcher.py -c /apps/soca/$SOCA_CONFIGURATION/cluster_manager/settings/queue_mapping.yml -t test
 
 # Add/Remove DCV hosts and configure ALB
-*/3 * * * * source /etc/environment; /apps/soca/$SOCA_CONFIGURATION/python/latest/bin/python3 /apps/soca/$SOCA_CONFIGURATION/cluster_manager/dcv_alb_manager.py >> /apps/soca/$SOCA_CONFIGURATION/cluster_manager/dcv_alb_manager.py.log 2>&1
+*/3 * * * * source /etc/environment; /usr/bin/python37 /apps/soca/$SOCA_CONFIGURATION/cluster_manager/dcv_alb_manager.py >> /apps/soca/$SOCA_CONFIGURATION/cluster_manager/dcv_alb_manager.py.log 2>&1
 " | crontab -
 
 # Make sure Secret Manager is available first
