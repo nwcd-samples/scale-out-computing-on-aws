@@ -197,7 +197,7 @@ RegionMap:
       rhel7: ami-0aec480c46b22c341
     cn-northwest-1: # Ningxia
       amazonlinux2: ami-0b6ea802f7ef3bcdb
-      centos7: ami-0cb411a476055a6b2
+      centos7: ami-051b1c989f0d9a1db
       rhel7: ami-0c3985edb66282387
 
   # Default computer node AMIs, to save computer launching time
