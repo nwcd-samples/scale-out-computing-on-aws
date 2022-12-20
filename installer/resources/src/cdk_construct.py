@@ -505,7 +505,7 @@ class SOCAInstall(cdk.Stack):
                                                            route53resolver.CfnResolverEndpoint.IpAddressRequestProperty(subnet_id=launch_subnets[1])],
                                                        security_group_ids=[self.soca_resources["scheduler_sg"].security_group_id,
                                                                            self.soca_resources["compute_node_sg"].security_group_id])
-        target_ip_list=list()
+        target_ip_list = list()
         for ip in self.soca_resources["ds_domain_dns"]:
             target_ip_list.append(route53resolver.CfnResolverRule.TargetAddressProperty(ip=ip))
 
