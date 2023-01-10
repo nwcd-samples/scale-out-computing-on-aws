@@ -136,7 +136,9 @@ def login_required(f):
             if "api_key" in session:
                 # If a new API key has been issued,
                 check_existing_key = ApiKeys.query.filter_by(user=session["user"], is_active=True).first()
+                logger.info(f"check_existing_key: {check_existing_key}")
                 if check_existing_key:
+                    logger.info(f"check_existing_key.token: {check_existing_key.token}")
                     if check_existing_key.token != session["api_key"]:
                         # Update API Key in session
                         session["api_key"] = check_existing_key.token
@@ -162,6 +164,7 @@ def login_required(f):
                                      headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
                                      params={"user": session["user"]},
                                      verify=False).json() # nosec
+                logger.info(f"check_user_key: {check_user_key}")
                 session["api_key"] = check_user_key["message"]
 
             return f()
