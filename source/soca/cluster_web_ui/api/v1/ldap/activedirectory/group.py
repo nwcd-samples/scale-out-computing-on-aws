@@ -69,7 +69,7 @@ class Group(Resource):
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
-            group_search_base = f"ou=Users,OU={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
+            group_search_base = f"{config.Config.LDAP_BASE_OU}"
             group_search_scope = ldap.SCOPE_SUBTREE
             filter_criteria = f"(&(objectClass=group)(cn={group}))"
             groups = conn.search_s(group_search_base, group_search_scope, filter_criteria)
@@ -177,7 +177,7 @@ class Group(Resource):
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
             group_members = []
-            group_dn = f"cn={group},ou=Users,ou={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
+            group_dn = f"cn={group},{config.Config.LDAP_BASE_OU}"
             if members is not None:
                 if not isinstance(members, list):
                     return {"success": False,
@@ -275,6 +275,7 @@ class Group(Resource):
         if group is None:
             return errors.all_errors("CLIENT_MISSING_PARAMETER", "group (str) parameter is required")
         else:
+            # only delete the SOCA created groups (ending with soca_group)
             if group.endswith(config.Config.GROUP_NAME_SUFFIX):
                 pass
             else:
@@ -284,7 +285,7 @@ class Group(Resource):
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
-            group_dn = f"cn={group},ou=Users,ou={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
+            group_dn = f"cn={group},{config.Config.LDAP_BASE_OU}"
             conn.delete_s(group_dn)
             return {"success": True, "message": "Deleted Resource."}, 200
         except Exception as err:
@@ -358,8 +359,8 @@ class Group(Resource):
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
-            group_dn = f"cn={group},ou=Users,OU={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
-            if "ou=users" in user.lower():
+            group_dn = f"cn={group},{config.Config.LDAP_BASE_OU}"
+            if "cn=users" in user.lower():
                 user_dn = user
             else:
                 user_dn = f"cn={user},ou=Users,OU={config.Config.NETBIOS},{config.Config.LDAP_BASE}"

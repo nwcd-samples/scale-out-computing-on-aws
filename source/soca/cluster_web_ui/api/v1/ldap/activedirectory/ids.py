@@ -46,8 +46,8 @@ class Ids(Resource):
             conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             # please note ou={config.Config.NETBIOS} section is not required in active directory for AD user and group
-            user_res = conn.search_s(f"cn=Users,{config.Config.LDAP_BASE}", ldap.SCOPE_SUBTREE, '(&(objectCategory=person)(objectClass=user)',["uidNumber"])
-            group_res = conn.search_s(f"cn=Users,{config.Config.LDAP_BASE}", ldap.SCOPE_SUBTREE, 'objectClass=group',["gidNumber"])
+            user_res = conn.search_s(config.Config.LDAP_BASE_OU, ldap.SCOPE_SUBTREE, '(&(objectCategory=person)(objectClass=user)',["uidNumber"])
+            group_res = conn.search_s(config.Config.LDAP_BASE_OU, ldap.SCOPE_SUBTREE, 'objectClass=group',["gidNumber"])
             for a in user_res:
                 if a[1]:
                     uid_temp = int(a[1].get('uidNumber')[0])

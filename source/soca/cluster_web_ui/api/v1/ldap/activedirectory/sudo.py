@@ -60,7 +60,7 @@ class Sudo(Resource):
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
-            user_search_base = f"CN={user},OU=Users,OU={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
+            user_search_base = f"CN={user},CN=Users,{config.Config.LDAP_BASE}"
             sudoers_group = config.Config.SUDOERS_GROUP
             filter_criteria = f"(&(objectClass=group)(member={user_search_base}))"
             for dn, entry in conn.search_s(config.Config.LDAP_BASE, ldap.SCOPE_SUBTREE, filter_criteria, ["cn", "member"]):

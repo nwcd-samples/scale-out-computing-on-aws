@@ -491,10 +491,12 @@ class SOCAInstall(cdk.Stack):
             self.soca_resources["ds_domain_dns"] = self.soca_resources["directory_service"].attr_dns_ip_addresses
             self.soca_resources["ds_domain_name"] = install_props.Config.directoryservice.activedirectory.name
             self.soca_resources["ds_type"] = "MicrosoftAD"
+            self.soca_resources["ds_domain_base_ou"] = f"dc={',dc='.join(self.soca_resources['ds_domain_name'].split('.'))}".lower()
         else:
             self.soca_resources["ds_type"] = user_specified_variables.directory_service_type
             self.soca_resources["ds_domain_dns"] = user_specified_variables.directory_service_dns.split(',')
             self.soca_resources["ds_domain_name"] = user_specified_variables.directory_service_name
+            self.soca_resources["ds_domain_base_ou"] = user_specified_variables.directory_service_base_ou
 
         # Create DNS Forwarder. Requests sent to AD will be forwarded to AD DNS
         # Other requests will remain the same. Do not create custom DHCP Option Set otherwise resources such as FSx or EFS won't resolve
@@ -685,7 +687,7 @@ class SOCAInstall(cdk.Stack):
                                  "%%PIP_CHINA_MIRROR%%": install_props.Config.china.pip_china_mirror,
                                  "%%CENTOS_CHINA_REPO%%": install_props.Config.china.centos_china_repo,
                                  "%%SOCA_AUTH_PROVIDER%%": install_props.Config.directoryservice.provider,
-                                 "%%SOCA_LDAP_BASE%%": "false" if install_props.Config.directoryservice.provider == "activedirectory" else f"dc={',dc='.join(install_props.Config.directoryservice.openldap.name.split('.'))}".lower()}
+                                 "%%SOCA_LDAP_BASE%%": user_specified_variables.directory_service_base_ou if install_props.Config.directoryservice.provider == "activedirectory" else f"dc={',dc='.join(install_props.Config.directoryservice.openldap.name.split('.'))}".lower()}
 
         with open("../user_data/Scheduler.sh") as plain_user_data:
             user_data = plain_user_data.read()
@@ -821,11 +823,15 @@ class SOCAInstall(cdk.Stack):
         else:
             secret["ExistingLDAP"] = user_specified_variables.ldap_host
 
+        # new created AD
         if not user_specified_variables.directory_service_id:
             if install_props.Config.directoryservice.provider == "activedirectory":
                 secret["DSDirectoryId"] = self.soca_resources["directory_service"].ref
                 secret["DSDomainName"] = install_props.Config.directoryservice.activedirectory.name
                 secret["DSDomainBase"] = f"dc={',dc='.join(secret['DSDomainName'].split('.'))}".lower()
+                # for new created AD, use root directory as base OU, like the domain test.com
+                # use dc=test,dc=com as base organization unit
+                secret["DSDomainBaseOU"] = self.soca_resources["ds_domain_base_ou"]
                 secret["DSDomainNetbios"] = install_props.Config.directoryservice.activedirectory.short_name.upper()
                 secret["DSDomainAdminUsername"] = self.soca_resources["ds_domain_admin"]
                 secret["DSDomainAdminPassword"] = self.soca_resources["ds_domain_admin_password"]
@@ -840,9 +846,11 @@ class SOCAInstall(cdk.Stack):
                 secret["LdapBase"] = f"dc={',dc='.join(secret['LdapName'].split('.'))}".lower()
                 secret["LdapHost"] = self.soca_resources["scheduler_instance"].instance_private_dns_name
         else:
+            # existing AD
             secret["DSDirectoryId"] = user_specified_variables.directory_service_id
             secret["DSDomainName"] = user_specified_variables.directory_service_name
             secret["DSDomainBase"] = f"dc={',dc='.join(secret['DSDomainName'].split('.'))}".lower()
+            secret["DSDomainBaseOU"] = user_specified_variables.directory_service_base_ou
             secret["DSDomainNetbios"] = user_specified_variables.directory_service_shortname.upper()
             secret["DSDomainAdminUsername"] = user_specified_variables.directory_service_user
             secret["DSDomainAdminPassword"] = user_specified_variables.directory_service_user_password
@@ -1068,6 +1076,7 @@ if __name__ == "__main__":
         "directory_service_id": app.node.try_get_context("directory_service_id"),
         "directory_service_dns": app.node.try_get_context("directory_service_dns"),
         "directory_service_type": app.node.try_get_context("directory_service_type"),
+        "directory_service_base_ou": app.node.try_get_context("directory_service_base_ou"),
         "es_endpoint": app.node.try_get_context("es_endpoint"),
         "ldap_host": app.node.try_get_context("ldap_host"),
         "compute_node_role_name": app.node.try_get_context("compute_node_role_name"),

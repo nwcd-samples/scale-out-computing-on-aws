@@ -128,7 +128,7 @@ class User(Resource):
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
-            user_search_base = f"CN=Users,{config.Config.LDAP_BASE}"
+            user_search_base = {config.Config.LDAP_BASE_OU}
             user_search_scope = ldap.SCOPE_SUBTREE
             user_filter = f"(&(objectClass=user)(sAMAccountName={user}))"
             check_user = conn.search_s(user_search_base, user_search_scope, user_filter)
@@ -209,7 +209,7 @@ class User(Resource):
             return errors.all_errors("CLIENT_MISSING_PARAMETER", "user (str), password (str), sudoers (bool) and email (str) parameters are required")
 
         if shell is None:
-            shell = "/bin/bash"
+            shell = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell"
 
         if user.lower() in password.lower():
             return errors.all_errors("DS_PASSWORD_USERNAME_IN_PW")
@@ -253,7 +253,8 @@ class User(Resource):
             # openldap
             # dn_user = f"cn={user},ou=Users,ou={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
             # active directory, in AD, User is cn not ou, and config.Config.NETBIOS is not required
-            dn_user = f"cn={user},cn=Users,{config.Config.LDAP_BASE}"
+            dn_user = f"cn={user},{config.Config.LDAP_BASE_OU}"
+            home = str(Path.home()) if not str(Path.home()) else "C:\\Users"
             attrs = [
                 ('objectClass', ['top'.encode('utf-8'),
                                  'person'.encode('utf-8'),
@@ -266,7 +267,7 @@ class User(Resource):
                 ('cn', [str(user).encode('utf-8')]),
                 ('uidNumber', [str(uid).encode('utf-8')]),
                 ('loginShell', [shell.encode('utf-8')]),
-                ('homeDirectory', (str(user) + '/' + str(user)).encode('utf-8'))]
+                ('homeDirectory', (os.path.join(home, user)).encode('utf-8'))]
 
             # Create group first to prevent GID issue
             create_user_group = post(config.Config.FLASK_ENDPOINT + "/api/ldap/group",

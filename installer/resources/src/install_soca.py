@@ -353,6 +353,16 @@ def get_install_parameters():
                     print(f"{fg('red')}Error: {directory_service['message']} {attr('reset')}")
                     sys.exit(1)
 
+                base_ou = FindExistingResource(install_parameters["region"],
+                                                         install_parameters["client_ip"]).find_base_ous(domain_name=install_parameters["directory_service_name"],
+                                                             domain_admin_name=install_parameters["directory_service_user"],
+                                                             domain_admin_password=install_parameters["directory_service_user_password"])
+                if base_ou["success"] is True:
+                    install_parameters["directory_service_base_ou"] = base_ou["message"]
+                else:
+                    print(f"{fg('red')}Error: {base_ou['message']} {attr('reset')}")
+                    sys.exit(1)
+
     # ElasticSearch Configuration (only possible when using existing VPC)
     # if install_parameters["vpc_id"]:
     #     choice_es = get_input(f"[Step 11/{total_install_phases}] {install_phases[11]}", None, ["new", "existing"], str)
@@ -559,6 +569,7 @@ if __name__ == "__main__":
         "directory_service_dns": None,
         # MicrosoftAD or ADConnector
         "directory_service_type": None,
+        "directory_service_base_ou": None,
         # EC2 Security Groups
         "compute_node_sg": None,
         "scheduler_sg": None,

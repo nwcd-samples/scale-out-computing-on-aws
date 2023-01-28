@@ -17,6 +17,7 @@ installer_path = "/".join(os.path.dirname(os.path.abspath(__file__)).split("/")[
 sys.path.append(installer_path)
 from installer.resources.src.prompt import get_input as get_input
 import os
+import ldap
 
 try:
     import boto3
@@ -150,6 +151,37 @@ class FindExistingResource:
             allowed_choices = list(ds.keys())
             choice = get_input(f"Choose the directory you want to use?", None, allowed_choices, int)
             return {"success": True, "message": ds[choice]}
+
+        except Exception as err:
+            return {"success": False, "message": str(err)}
+
+
+    def find_base_ous(self, domain_name, domain_admin_name, domain_admin_password):
+        """
+        Allow customer to select preferable organization unit as SOCA user directory
+        Due to the build-in User directory type is CN not OU in AD, append it in case there is any special requirement
+        """
+        try:
+            print(f"\n===== Select {fg('misty_rose_3')} your root organization unit {attr('reset')} ======\n")
+            ous = {}
+            count = 1
+            conn = ldap.initialize(f"ldap://{domain_name}")
+            conn.protocol_version = 3
+            conn.set_option(ldap.OPT_REFERRALS, 0)
+            conn.simple_bind_s(domain_admin_name, domain_admin_password)
+            # base name sample: DC=yywad,DC=demo
+            filter_criteria = f"(objectClass=organizationalUnit)"
+            domain_base_name = f"dc={',dc='.join(domain_name.split('.'))}".lower()
+            result = conn.search_s(domain_base_name, ldap.SCOPE_ONELEVEL, filter_criteria, ['DistingushedName'])
+            for item in result:
+                if item[0]:
+                    ous[count] = item[0]
+                    count += 1
+            ous[count] = f'CN=Users,{domain_base_name}'
+            [print("    {:2} > {}".format(key, value)) for key, value in ous.items()]
+            allowed_choices = list(ous.keys())
+            choice = get_input(f"Choose the directory you want to use?", None, allowed_choices, int)
+            return {"success": True, "message": ous[choice]}
 
         except Exception as err:
             return {"success": False, "message": str(err)}

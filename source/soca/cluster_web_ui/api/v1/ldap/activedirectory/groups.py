@@ -44,7 +44,7 @@ class Groups(Resource):
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
-            group_search_base = f"OU=Users,OU={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
+            group_search_base = config.Config.LDAP_BASE_OU
             filter_criteria = f"(objectClass=group)"
             groups = conn.search_s(group_search_base, ldap.SCOPE_SUBTREE, filter_criteria, ["cn", "member"])
             logger.info(f"Checking all AD groups with search filter {filter_criteria} and base {group_search_base}")
