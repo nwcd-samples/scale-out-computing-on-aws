@@ -683,10 +683,10 @@ def main(**kwargs):
                 'Key': None,
                 'Default': soca_configuration['FileSystemDataProvider'],
             },
-            'ESDomainEndpoint': {
-                'Key': None,
-                'Default': soca_configuration['ESDomainEndpoint'],
-            },
+            # 'ESDomainEndpoint': {
+            #     'Key': None,
+            #     'Default': soca_configuration['ESDomainEndpoint'],
+            # },
             'FSxLustreConfiguration': {
                 'Key': 'fsx_lustre_configuration',
                 'Default': False
