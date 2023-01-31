@@ -155,7 +155,6 @@ class FindExistingResource:
         except Exception as err:
             return {"success": False, "message": str(err)}
 
-
     def find_base_ous(self, domain_name, domain_admin_name, domain_admin_password):
         """
         Allow customer to select preferable organization unit as SOCA user directory

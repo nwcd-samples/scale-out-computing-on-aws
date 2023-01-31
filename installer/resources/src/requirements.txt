@@ -35,3 +35,4 @@ colored==1.4.2
 requests==2.25.1
 requests-aws4auth==1.0.1
 PyYAML==5.4.1
+python-ldap==3.4.0
