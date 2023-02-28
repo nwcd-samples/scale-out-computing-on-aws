@@ -45,8 +45,12 @@ class Ids(Resource):
         try:
             conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
-            user_res = conn.search_s(f"ou=Users,ou={config.Config.NETBIOS},{config.Config.LDAP_BASE}", ldap.SCOPE_SUBTREE, 'objectClass=person',["uidNumber"])
-            group_res = conn.search_s(f"ou=Users,ou={config.Config.NETBIOS},{config.Config.LDAP_BASE}", ldap.SCOPE_SUBTREE, 'objectClass=group',["gidNumber"])
+            conn.protocol_version = 3
+            conn.set_option(ldap.OPT_REFERRALS, 0)
+            logger.info(f"Ready to search user within {config.Config.LDAP_BASE}")
+            user_res = conn.search_s(f"{config.Config.LDAP_BASE}", ldap.SCOPE_SUBTREE, '(&(objectCategory=person)(objectClass=user))',["uidNumber"])
+            logger.info(f"Ready to search group within {config.Config.LDAP_BASE}")
+            group_res = conn.search_s(f"{config.Config.LDAP_BASE}", ldap.SCOPE_SUBTREE, 'objectClass=group',["gidNumber"])
             for a in user_res:
                 if a[1]:
                     uid_temp = int(a[1].get('uidNumber')[0])

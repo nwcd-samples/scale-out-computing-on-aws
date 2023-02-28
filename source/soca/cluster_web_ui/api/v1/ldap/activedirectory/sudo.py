@@ -56,11 +56,13 @@ class Sudo(Resource):
 
         try:
             logger.info(f"Checking SUDO permission for {user}")
+            if user == config.Config.SOCA_Admin:
+                return {'success': True, 'message': "User has SUDO permissions."}, 200
             conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
-            user_search_base = f"CN={user},OU=Users,OU={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
+            user_search_base = f"CN={user},{config.Config.LDAP_BASE}"
             sudoers_group = config.Config.SUDOERS_GROUP
             filter_criteria = f"(&(objectClass=group)(member={user_search_base}))"
             for dn, entry in conn.search_s(config.Config.LDAP_BASE, ldap.SCOPE_SUBTREE, filter_criteria, ["cn", "member"]):
@@ -118,7 +120,7 @@ class Sudo(Resource):
         conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
         conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
         sudoers_group = config.Config.SUDOERS_GROUP_DN
-        dn_user = f"cn={user},ou=Users,OU={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
+        dn_user = f"cn={user},{config.Config.LDAP_BASE}"
         logger.info(f"Adding SUDO permission for {dn_user}")
         mod_attrs = [(ldap.MOD_ADD, 'member', [dn_user.encode("utf-8")])]
         try:
@@ -169,7 +171,7 @@ class Sudo(Resource):
         conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
         conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
         sudoers_group = config.Config.SUDOERS_GROUP_DN
-        dn_user = f"cn={user},ou=Users,OU={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
+        dn_user = f"cn={user},{config.Config.LDAP_BASE}"
         logger.info(f"Revoking sudo permission for {dn_user}")
         mod_attrs = [(ldap.MOD_DELETE, 'member', [dn_user.encode("utf-8")])]
         try:

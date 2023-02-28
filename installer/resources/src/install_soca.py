@@ -349,6 +349,7 @@ def get_install_parameters():
                     install_parameters["directory_service_name"] = directory_service["message"]["name"]
                     install_parameters["directory_service_dns"] = ','.join(directory_service["message"]["dns"])
                     install_parameters["directory_service_type"] = directory_service["message"]["type"]
+                    install_parameters["directory_service_base_ou"] = install_props.Config.directoryservice.activedirectory.base_ou
                 else:
                     print(f"{fg('red')}Error: {directory_service['message']} {attr('reset')}")
                     sys.exit(1)
@@ -555,6 +556,7 @@ if __name__ == "__main__":
         "directory_service_user_password": None,
         "directory_service_shortname": None,
         "directory_service_name": None,
+        "directory_service_base_ou": None,
         "directory_service_id": None,
         "directory_service_dns": None,
         # MicrosoftAD or ADConnector
@@ -614,16 +616,16 @@ if __name__ == "__main__":
     iam = session.client("iam", region_name=install_parameters["region"], config=boto_extra_config)
     accepted_aws_values = accepted_aws_resources()
 
-    # Verify if we have the default Service Linked Role for ElasticSearch. SOCA will create it if needed
-    try:
-        es_roles = iam.list_roles(PathPrefix='/aws-service-role/es.amazonaws.com')
-        if len(es_roles['Roles']) == 0:
-            install_parameters["create_es_service_role"] = True
-        else:
-            install_parameters["create_es_service_role"] = False
-    except ClientError as err:
-        print(f"{fg('red')}Unable to determine if you have a ServiceLinked created on your account for ElasticSearch. Verify your IAM permissions: {err} {attr('reset')}")
-        sys.exit(1)
+    # # Verify if we have the default Service Linked Role for ElasticSearch. SOCA will create it if needed
+    # try:
+    #     es_roles = iam.list_roles(PathPrefix='/aws-service-role/es.amazonaws.com')
+    #     if len(es_roles['Roles']) == 0:
+    #         install_parameters["create_es_service_role"] = True
+    #     else:
+    #         install_parameters["create_es_service_role"] = False
+    # except ClientError as err:
+    #     print(f"{fg('red')}Unable to determine if you have a ServiceLinked created on your account for ElasticSearch. Verify your IAM permissions: {err} {attr('reset')}")
+    #     sys.exit(1)
 
     # Retrieve the AWS Account ID for CDK
     try:

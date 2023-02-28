@@ -132,11 +132,12 @@ def private_api(f):
 def login_required(f):
     @wraps(f)
     def validate_account():
+        logger.info(f"Session object {session}")
         if "user" in session:
             if "api_key" in session:
                 # If a new API key has been issued,
                 check_existing_key = ApiKeys.query.filter_by(user=session["user"], is_active=True).first()
-                logger.info(f"check_existing_key: {check_existing_key}")
+                logger.info(f"check_existing_key.scope: {check_existing_key.scope}")
                 if check_existing_key:
                     logger.info(f"check_existing_key.token: {check_existing_key.token}")
                     if check_existing_key.token != session["api_key"]:

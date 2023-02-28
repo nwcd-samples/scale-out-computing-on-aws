@@ -50,6 +50,7 @@ from yaml.scanner import ScannerError
 import random
 import string
 from types import SimpleNamespace
+from find_existing_resources import FindExistingResource
 
 
 def get_install_properties():
@@ -408,7 +409,7 @@ class SOCAInstall(cdk.Stack):
             self.soca_resources["spot_fleet_role"] = iam.Role.from_role_arn(self, "SpotFleetRole", role_arn=user_specified_variables.spotfleet_role_arn)
             self.soca_resources["compute_node_instance_profile"] = iam.CfnInstanceProfile(self, "ComputeNodeInstanceProfile", roles=[user_specified_variables.compute_node_role_name])
 
-        # Add SSM Managed Policy
+# Add SSM Managed Policy
         self.soca_resources["scheduler_role"].add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore"))
         self.soca_resources["compute_node_role"].add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore"))
 
@@ -495,29 +496,34 @@ class SOCAInstall(cdk.Stack):
             self.soca_resources["ds_type"] = user_specified_variables.directory_service_type
             self.soca_resources["ds_domain_dns"] = user_specified_variables.directory_service_dns.split(',')
             self.soca_resources["ds_domain_name"] = user_specified_variables.directory_service_name
+        self.soca_resources["ds_domain_base_ou"] = install_props.Config.directoryservice.activedirectory.base_ou
 
-        # Create DNS Forwarder. Requests sent to AD will be forwarded to AD DNS
-        # Other requests will remain the same. Do not create custom DHCP Option Set otherwise resources such as FSx or EFS won't resolve
-        resolver = route53resolver.CfnResolverEndpoint(self, "ADRoute53OutboundResolver", direction="OUTBOUND",
-                                                       name=user_specified_variables.cluster_id,
-                                                       ip_addresses=[
-                                                           route53resolver.CfnResolverEndpoint.IpAddressRequestProperty(subnet_id=launch_subnets[0]),
-                                                           route53resolver.CfnResolverEndpoint.IpAddressRequestProperty(subnet_id=launch_subnets[1])],
-                                                       security_group_ids=[self.soca_resources["scheduler_sg"].security_group_id,
-                                                                           self.soca_resources["compute_node_sg"].security_group_id])
-        target_ip_list = list()
-        for ip in self.soca_resources["ds_domain_dns"]:
-            target_ip_list.append(route53resolver.CfnResolverRule.TargetAddressProperty(ip=ip))
+        existed_rule_association = FindExistingResource(user_specified_variables.region,user_specified_variables.client_ip)\
+            .check_resolver_rules_associations(self.soca_resources["vpc"].vpc_id, self.soca_resources["ds_domain_name"])
+        if not existed_rule_association:
+            # Create DNS Forwarder. Requests sent to AD will be forwarded to AD DNS
+            # Other requests will remain the same. Do not create custom DHCP Option Set otherwise resources such as FSx or EFS won't resolve
+            resolver = route53resolver.CfnResolverEndpoint(self, "ADRoute53OutboundResolver", direction="OUTBOUND",
+                                                           name=user_specified_variables.cluster_id,
+                                                           ip_addresses=[
+                                                               route53resolver.CfnResolverEndpoint.IpAddressRequestProperty(subnet_id=launch_subnets[0]),
+                                                               route53resolver.CfnResolverEndpoint.IpAddressRequestProperty(subnet_id=launch_subnets[1])],
+                                                           security_group_ids=[self.soca_resources["scheduler_sg"].security_group_id,
+                                                                               self.soca_resources["compute_node_sg"].security_group_id])
+            target_ip_list = list()
+            for ip in self.soca_resources["ds_domain_dns"]:
+                target_ip_list.append(route53resolver.CfnResolverRule.TargetAddressProperty(ip=ip))
 
-        resolver_rule = route53resolver.CfnResolverRule(self, "ADRoute53OutboundResolverRule",
-                                                        name=user_specified_variables.cluster_id,
-                                                        domain_name=self.soca_resources["ds_domain_name"],
-                                                        rule_type="FORWARD",
-                                                        resolver_endpoint_id=resolver.attr_resolver_endpoint_id,
-                                                        target_ips=target_ip_list)
-        route53resolver.CfnResolverRuleAssociation(self, "ADRoute53ResolverRuleAssociation",
-                                                   resolver_rule_id=resolver_rule.attr_resolver_rule_id,
-                                                   vpc_id=self.soca_resources["vpc"].vpc_id)
+            resolver_rule = route53resolver.CfnResolverRule(self, "ADRoute53OutboundResolverRule",
+                                                            name=user_specified_variables.cluster_id,
+                                                            domain_name=self.soca_resources["ds_domain_name"],
+                                                            rule_type="FORWARD",
+                                                            resolver_endpoint_id=resolver.attr_resolver_endpoint_id,
+                                                            target_ips=target_ip_list)
+
+            route53resolver.CfnResolverRuleAssociation(self, "ADRoute53ResolverRuleAssociation",
+                                                       resolver_rule_id=resolver_rule.attr_resolver_rule_id,
+                                                       vpc_id=self.soca_resources["vpc"].vpc_id)
 
     def storage(self):
         """
@@ -821,6 +827,7 @@ class SOCAInstall(cdk.Stack):
         else:
             secret["ExistingLDAP"] = user_specified_variables.ldap_host
 
+        # Customer AD
         if not user_specified_variables.directory_service_id:
             if install_props.Config.directoryservice.provider == "activedirectory":
                 secret["DSDirectoryId"] = self.soca_resources["directory_service"].ref
@@ -834,12 +841,14 @@ class SOCAInstall(cdk.Stack):
                 secret["DSServiceAccountPassword"] = "false"
                 secret["DSResetLambdaFunctionArn"] = self.soca_resources["reset_ds_lambda"].function_arn
                 secret["DSType"] = self.soca_resources["ds_type"]
+                secret["DSBaseOU"] = self.soca_resources["ds_domain_base_ou"]
             else:
                 # OpenLDAP
                 secret["LdapName"] = install_props.Config.directoryservice.openldap.name
                 secret["LdapBase"] = f"dc={',dc='.join(secret['LdapName'].split('.'))}".lower()
                 secret["LdapHost"] = self.soca_resources["scheduler_instance"].instance_private_dns_name
         else:
+            # AWS Managed AD
             secret["DSDirectoryId"] = user_specified_variables.directory_service_id
             secret["DSDomainName"] = user_specified_variables.directory_service_name
             secret["DSDomainBase"] = f"dc={',dc='.join(secret['DSDomainName'].split('.'))}".lower()
@@ -852,6 +861,8 @@ class SOCAInstall(cdk.Stack):
             # please warn this will change AD account password
             secret["DSResetLambdaFunctionArn"] = self.soca_resources["reset_ds_lambda"].function_arn
             secret["DSType"] = self.soca_resources["ds_type"]
+            secret["DSBaseOU"] = self.soca_resources["ds_domain_base_ou"]
+        secret["SOCAAdmin"] = user_specified_variables.ldap_user
 
         self.soca_resources["soca_config"] = secretsmanager.CfnSecret(self, "SOCASecretManagerSecret",
                                                                       description=f"Store SOCA configuration for cluster {user_specified_variables.cluster_id}",
@@ -1033,8 +1044,9 @@ class SOCAInstall(cdk.Stack):
 if __name__ == "__main__":
     app = core.App()
 
-    # User specified variables, queryable as Python Object
+    # Config properties on default_config.yml
     install_props = json.loads(json.dumps(get_install_properties()), object_hook=lambda d: SimpleNamespace(**d))
+    # User specified variables, queryable as Python Object
     user_specified_variables = json.loads(json.dumps({
         "bucket": app.node.try_get_context("bucket"),
         "region": app.node.try_get_context("region"),

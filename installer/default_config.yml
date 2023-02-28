@@ -86,6 +86,12 @@ Config:
       name: "soca.local" # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-directoryservice-microsoftad.html#cfn-directoryservice-microsoftad-name
       short_name: "SOCA" # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-directoryservice-microsoftad.html#cfn-directoryservice-microsoftad-shortname
       edition: "Standard" # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-directoryservice-microsoftad.html#cfn-directoryservice-microsoftad-edition
+      # Base organizational unit distinguished name (DN), like OU=Marketing,DC=example,DC=com
+      # if specify the base_ou, SOCA will access AD objects like person, organizationUint or group WITHIN it.
+      # Or will use domain name as default like
+      # run below powershell command in domain controller to get all organizational unit dn
+      # Get-ADOrganizationalUnit -Filter 'Name -like "*"' | Format-Table Name, DistinguishedName -A
+      base_ou: "OU=北京子公司,DC=yywad,DC=demo"
 
   # Configure your AWS China Regions options below
   china:

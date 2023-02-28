@@ -39,6 +39,7 @@ class FindExistingResource:
         self.ds = session.client("ds")
         self.es = session.client("es")
         self.iam = session.client("iam")
+        self.resolver = session.client("route53resolver")
         self.install_parameters = {}
 
     def find_vpc(self):
@@ -153,6 +154,54 @@ class FindExistingResource:
 
         except Exception as err:
             return {"success": False, "message": str(err)}
+
+    def check_resolver_rules_associations(self, vpi_id, domain_name):
+        """
+        check if there are associations between vpc and domain already
+        return True if existed, False for not
+        """
+        max_result = 100
+        next_token = ''
+        while True:
+            response = self.resolver.list_resolver_rule_associations(
+                Filters=[
+                    {
+                        'Name': 'VPCId',
+                        'Values': [vpi_id]
+                    },
+                    {
+                        'Name': 'Status',
+                        'Values': ['COMPLETE']
+                    }
+                ],
+                MaxResults=max_result,
+                NextToken=next_token
+            )
+            # print(response)
+
+            if 'ResolverRuleAssociations' in response:
+                associations = response['ResolverRuleAssociations']
+                for association in associations:
+                    rule_id = association['ResolverRuleId']
+                    rule_response = self.resolver.get_resolver_rule(ResolverRuleId=rule_id)
+                    # print(f'rule response: {rule_response}')
+                    if 'ResolverRule' in rule_response:
+                        resolve_rule = rule_response['ResolverRule']
+                        rule_domain_name = resolve_rule['DomainName'].lower()
+                        print(f"domain name: {domain_name}")
+                        if rule_domain_name.endswith('.'):
+                            rule_domain_name = rule_domain_name[0:len(rule_domain_name) - 1]
+                        if rule_domain_name == domain_name.lower():
+                            return True
+                    else:
+                        return False
+
+                if 'NextToken' in response:
+                    next_token = response['NextToken']
+                else:
+                    return False
+            else:
+                return False
 
     def get_subnets(self, vpc_id, environment, selected_subnets=[]):
         try:

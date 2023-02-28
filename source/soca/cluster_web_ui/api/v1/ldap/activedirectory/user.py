@@ -31,6 +31,7 @@ import datetime
 from cryptography.hazmat.primitives import serialization as crypto_serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend as crypto_default_backend
+import ldap.modlist as modlist
 
 logger = logging.getLogger("api")
 
@@ -38,6 +39,10 @@ logger = logging.getLogger("api")
 def create_home(username, usergroup):
     try:
         user_home = config.Config.USER_HOME
+        logger.info(f"username: {username}, usergroup: {usergroup}, user_home: {user_home}")
+        # if os.path.exists(f"{user_home}/{username}"):
+        #     logger.info(f"{user_home}/{username} is existed, skip it")
+        #     return True
         key = rsa.generate_private_key(backend=crypto_default_backend(), public_exponent=65537, key_size=2048)
         private_key = key.private_bytes(
             crypto_serialization.Encoding.PEM,
@@ -82,6 +87,7 @@ def create_home(username, usergroup):
         return True
 
     except Exception as e:
+        logger.info(f"When creating home directory, occurred error {str(e)}")
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
@@ -127,7 +133,12 @@ class User(Resource):
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
-            user_search_base = f"OU=Users,OU={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
+
+            # user_search_base = f"{config.Config.LDAP_BASE}"
+            if config.Config.OU_BASE:
+                user_search_base = f"{config.Config.OU_BASE}"
+            else:
+                user_search_base = f"{config.Config.LDAP_BASE}"
             user_search_scope = ldap.SCOPE_SUBTREE
             user_filter = f"(&(objectClass=user)(sAMAccountName={user}))"
             check_user = conn.search_s(user_search_base, user_search_scope, user_filter)
@@ -142,7 +153,9 @@ class User(Resource):
     @admin_api
     def post(self):
         """
-        Create a new LDAP user
+        Create a new LDAP user. Please note we hide the user and group management on SOCA GUI to prohibit
+        creating new user and group from SOCA side in case disrupting customer existing AD directory
+        This method will be called only once when creating SOCA initial user during installation.
         ---
         tags:
           - User Management
@@ -216,7 +229,6 @@ class User(Resource):
         if user.lower() == "admin":
             return errors.all_errors("DS_PASSWORD_USERNAME_IS_ADMIN")
 
-
         get_id = get(config.Config.FLASK_ENDPOINT + '/api/ldap/ids',
                      headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
                      verify=False)  # nosec
@@ -225,7 +237,6 @@ class User(Resource):
         else:
             logger.error("/api/ldap/ids returned error : " + str(get_id.__dict__))
             return {"success": False, "message": "/api/ldap/ids returned error: " + str(get_id.__dict__)}, 500
-
 
         # Note: parseaddr adheres to rfc5322 , which means user@domain is a correct address.
         # You do not necessarily need to add a tld at the end
@@ -245,53 +256,105 @@ class User(Resource):
                 return errors.all_errors("GID_ALREADY_IN_USE")
 
         try:
-            conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
+            ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+            conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}:636")
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
-            dn_user = f"cn={user},ou=Users,ou={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
-            attrs = [
-                ('objectClass', ['top'.encode('utf-8'),
-                                 'person'.encode('utf-8'),
-                                 'user'.encode('utf-8'),
-                                 'organizationalPerson'.encode('utf-8')]),
-                ('displayName', [str(user).encode('utf-8')]),
-                ('mail', [email.encode('utf-8')]),
-                ('sAMAccountName', [str(user).encode('utf-8')]),
-                ('userPrincipalName', [str(user + "@" + config.Config.DOMAIN_NAME).encode('utf-8')]),
-                ('cn', [str(user).encode('utf-8')]),
-                ('uidNumber', [str(uid).encode('utf-8')]),
-                ('loginShell', [shell.encode('utf-8')]),
-                ('homeDirectory', (str(user) + '/' + str(user)).encode('utf-8'))]
+            dn_user = f"cn={user},cn=Users,{config.Config.LDAP_BASE}"
+            attrs = {}
+            attrs['objectClass'] = ['top'.encode('utf-8')
+                , 'person'.encode('utf - 8')
+                , 'user'.encode('utf - 8')
+                ,'organizationalPerson'.encode('utf-8')]
+            attrs['displayName'] = [str(user).encode('utf-8')]
+            attrs['mail'] = [str(email).encode('utf-8')]
+            attrs['sAMAccountName'] = [str(user).encode('utf-8')]
+            attrs['userPrincipalName'] = [str(user + "@" + config.Config.DOMAIN_NAME).encode('utf-8')]
+            attrs['cn'] = [str(user).encode('utf-8')]
+            attrs['uidNumber'] = [str(uid).encode('utf-8')]
+            attrs['userAccountControl'] = ['514'.encode('utf-8')]
+            attrs['loginShell'] = [shell.encode('utf-8')]
+            attrs['homeDirectory'] = (str(user) + '/' + str(user)).encode('utf-8')
+            # attrs = [
+            #     ('objectClass', ['top'.encode('utf-8'),
+            #                      'person'.encode('utf-8'),
+            #                      'user'.encode('utf-8'),
+            #                      'organizationalPerson'.encode('utf-8')]),
+            #     ('displayName', [str(user).encode('utf-8')]),
+            #     ('mail', [email.encode('utf-8')]),
+            #     ('sAMAccountName', [str(user).encode('utf-8')]),
+            #     ('userPrincipalName', [str(user + "@" + config.Config.DOMAIN_NAME).encode('utf-8')]),
+            #     ('cn', [str(user).encode('utf-8')]),
+            #     ('uidNumber', [str(uid).encode('utf-8')]),
+            #     ('userAccountControl', 514),
+            #     ('loginShell', [shell.encode('utf-8')]),
+            #     ('homeDirectory', (str(user) + '/' + str(user)).encode('utf-8'))]
+            user_ldif = modlist.addModlist(attrs)
+            # Check if the expected group is existed
+            logger.info(f"Checking if the group {group} existed")
+            expected_group_resp = get(config.Config.FLASK_ENDPOINT + "/api/ldap/group",
+                                 headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
+                                 params={"group": group},
+                                 verify=False)
+            logger.info(f"Get the http code {expected_group_resp.status_code}")
+            if expected_group_resp.status_code != 200:
+                # Create group first to prevent GID issue
+                create_user_group = post(config.Config.FLASK_ENDPOINT + "/api/ldap/group",
+                                         headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
+                                         data={"group": f"{group}", "gid": gid},
+                                         verify=False) # nosec
+                if create_user_group.status_code != 200:
+                    return errors.all_errors("COULD_NOT_CREATE_GROUP", str(create_user_group.text))
 
-            # Create group first to prevent GID issue
-            create_user_group = post(config.Config.FLASK_ENDPOINT + "/api/ldap/group",
-                                     headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
-                                     data={"group": f"{group}", "gid": gid},
-                                     verify=False) # nosec
-            if create_user_group.status_code != 200:
-                return errors.all_errors("COULD_NOT_CREATE_GROUP", str(create_user_group.text))
-
+            # time.sleep(30)
+            # Prep the password
+            # http://marcitland.blogspot.com/2011/02/python-active-directory-linux.html
+            # In case user input \n ,\r as password, let's do some additional operation
+            # unicode_pass = unicode('\"' + password + '\"', 'iso-8859-1')
+            unicode_pass = ('\"' + password + '\"').encode('utf-16-le')
+            # password_value = unicode_pass.decode('utf-16le')
+            add_pass = [(ldap.MOD_REPLACE, 'unicodePwd', [unicode_pass])]
+            # 512 will set user account to enabled
+            mod_acct = [(ldap.MOD_REPLACE, 'userAccountControl', ['512'.encode('utf-8')])]
             # Create user
-            conn.add_s(dn_user, attrs)
+            try:
+                logger.info(f"Ready to add new user {dn_user}")
+                conn.add_s(dn_user, user_ldif)
+            except ldap.LDAPError as error:
+                logger.error(f"When calling conn.add_s occurred below error: {str(error)}")
+                return errors.all_errors(type(error).__name__, error)
+            # Add password for new user
+            try:
+                logger.info(f"Ready to update user password: {add_pass}")
+                conn.modify_s(dn=dn_user, modlist=add_pass)
+            except ldap.LDAPError as error:
+                logger.error(f"When updating password occurred below error: {str(error)}")
+                return errors.all_errors(type(error).__name__, error)
+            # Change the account back to enable
+            try:
+                logger.info(f"Ready to enable the state to {mod_acct}")
+                conn.modify_s(dn=dn_user, modlist=mod_acct)
+            except ldap.LDAPError as error:
+                logger.error(f"When enabling the new user occurred below error: {str(error)}")
+                return errors.all_errors(type(error).__name__, error)
 
-            # Wait for the account to be sync
-            time.sleep(30)
-            # Reset password via Lambda
-            change_password = post(config.Config.FLASK_ENDPOINT + '/api/user/reset_password',
-                                   headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
-                                   data={"user": user,
-                                         "password": password},
-                                   verify=False)  # nosec
-            logger.info(f"Checking password reset request: {change_password.text}")
-            if change_password.status_code != 200:
-                return errors.all_errors("DS_CREATED_USER_NO_PW", str(change_password.text))
-
-            logger.info("Sleeping 10 seconds to make sure domain controllers are in sync")
-            time.sleep(10)
+            # # Wait for the account to be sync
+            # time.sleep(30)
+            # # Reset password via Lambda
+            # change_password = post(config.Config.FLASK_ENDPOINT + '/api/user/reset_password',
+            #                        headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
+            #                        data={"user": user,
+            #                              "password": password},
+            #                        verify=False)  # nosec
+            # logger.info(f"Checking password reset request: {change_password.text}")
+            # if change_password.status_code != 200:
+            #     return errors.all_errors("DS_CREATED_USER_NO_PW", str(change_password.text))
+            #
+            # logger.info("Sleeping 10 seconds to make sure domain controllers are in sync")
+            # time.sleep(10)
 
             # Add user to group, need to wait 30 for account sync on AD
-            '''
             update_group = put(config.Config.FLASK_ENDPOINT + "/api/ldap/group",
                                headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
                                data={"group": f"{user}group",
@@ -301,7 +364,6 @@ class User(Resource):
 
             if update_group.status_code != 200:
                 return errors.all_errors("UNABLE_TO_ADD_USER_TO_GROUP", f"User/Group created but could not add user to his group due to {update_group.json()}")
-            '''
             # Create home directory
             logger.info("About to create home directory for user")
             if create_home(user, group) is False:
@@ -317,16 +379,16 @@ class User(Resource):
             except Exception as err:
                 logger.error("User created but unable to create API key. SOCA will try to generate it when user log in for the first time " + str(err))
 
-            # Add Sudo permission
-            if sudoers == 1:
-                logger.info(f"Adding SUDO permissions to user {user}")
-                grant_sudo = post(config.Config.FLASK_ENDPOINT + "/api/ldap/sudo",
-                                  headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
-                                  data={"user": user},
-                                  verify=False # nosec
-                                  )
-                if grant_sudo.status_code != 200:
-                    return errors.all_errors("UNABLE_TO_GRANT_SUDO", "User added but unable to give admin permissions")
+            # # Add Sudo permission
+            # if sudoers == 1:
+            #     logger.info(f"Adding SUDO permissions to user {user}")
+            #     grant_sudo = post(config.Config.FLASK_ENDPOINT + "/api/ldap/sudo",
+            #                       headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
+            #                       data={"user": user},
+            #                       verify=False # nosec
+            #                       )
+            #     if grant_sudo.status_code != 200:
+            #         return errors.all_errors("UNABLE_TO_GRANT_SUDO", "User added but unable to give admin permissions")
             logger.info("User added successfully")
             return {"success": True, "message": "Added user"}, 200
 
@@ -377,31 +439,31 @@ class User(Resource):
             return errors.all_errors("CLIENT_OWN_RESOURCE")
 
         try:
-            logger.info(f"Received user delete request for {user}")
-            domain_name = config.Config.DOMAIN_NAME
-            root_user = config.Config.ROOT_USER
-            root_pw = config.Config.ROOT_PW
-            ldap_base = config.Config.LDAP_BASE
-            netbios = config.Config.NETBIOS
-            conn = ldap.initialize(f"ldap://{domain_name}")
-            conn.simple_bind_s(f"{root_user}@{domain_name}", root_pw)
-            today = datetime.datetime.utcnow().strftime("%s")
-            user_home = config.Config.USER_HOME + "/" + user
-            backup_folder = config.Config.USER_HOME + "/" + user + "_" + today
-            logger.info(f"Creating backup folder {backup_folder}")
-            shutil.move(user_home, backup_folder)
-            entries_to_delete = [f"cn={user},ou=Users,ou={netbios},{ldap_base}",
-                                 f"cn={group},ou=Users,ou={netbios},{ldap_base}"]
-
-            for entry in entries_to_delete:
-                try:
-                    logger.info(f"About to delete {entry}")
-                    conn.delete_s(entry)
-                except ldap.NO_SUCH_OBJECT:
-                    if entry == f"cn={user},ou=Users,ou={netbios},{ldap_base}":
-                        return {"success": False, "message": "Unknown user"}, 203
-                except Exception as err:
-                    return {"success": False, "message": "Unknown error: " + str(err)}, 500
+            # logger.info(f"Received user delete request for {user}")
+            # domain_name = config.Config.DOMAIN_NAME
+            # root_user = config.Config.ROOT_USER
+            # root_pw = config.Config.ROOT_PW
+            # ldap_base = config.Config.LDAP_BASE
+            # netbios = config.Config.NETBIOS
+            # conn = ldap.initialize(f"ldap://{domain_name}")
+            # conn.simple_bind_s(f"{root_user}@{domain_name}", root_pw)
+            # today = datetime.datetime.utcnow().strftime("%s")
+            # user_home = config.Config.USER_HOME + "/" + user
+            # backup_folder = config.Config.USER_HOME + "/" + user + "_" + today
+            # logger.info(f"Creating backup folder {backup_folder}")
+            # shutil.move(user_home, backup_folder)
+            # entries_to_delete = [f"cn={user},ou=Users,ou={netbios},{ldap_base}",
+            #                      f"cn={group},ou=Users,ou={netbios},{ldap_base}"]
+            #
+            # for entry in entries_to_delete:
+            #     try:
+            #         logger.info(f"About to delete {entry}")
+            #         conn.delete_s(entry)
+            #     except ldap.NO_SUCH_OBJECT:
+            #         if entry == f"cn={user},ou=Users,ou={netbios},{ldap_base}":
+            #             return {"success": False, "message": "Unknown user"}, 203
+            #     except Exception as err:
+            #         return {"success": False, "message": "Unknown error: " + str(err)}, 500
             logger.info(f"About to invalidate API key for {user}")
             invalidate_api_key = delete(config.Config.FLASK_ENDPOINT + "/api/user/api_key",
                                         headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
