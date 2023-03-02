@@ -185,7 +185,6 @@ class Config(object):
         ROOT_PW = soca_config["DSDomainAdminPassword"]
         # example "DSDomainBase": "dc=yywad,dc=demo"
         LDAP_BASE = soca_config["DSDomainBase"]
-        OU_BASE = soca_config["DSBaseOU"]
         NETBIOS = soca_config["DSDomainNetbios"]
         # if soca_config["DSType"] !=
         DIRECTORY_SERVICE_RESET_LAMBDA_ARN = soca_config["DSResetLambdaFunctionArn"]
@@ -193,7 +192,9 @@ class Config(object):
         SUDOERS_GROUP_DN = f"CN={SUDOERS_GROUP},OU=AWS Delegated Groups,{LDAP_BASE}"
         # With AD, user and group share the same OU (Domain Users).
         # To identify group/user, group associated to "user" will be named "user<GROUP_NAME_SUFFIX>"
-    SOCA_Admin = soca_config["SOCAAdmin"]
+    OU_BASE = soca_config["DSBaseOU"]
+    SOCA_Admin = soca_config["DSServiceAccountUsername"]
+    Cert_File = soca_config[""]
     GROUP_NAME_SUFFIX = "socagroup"
 
     # PBS

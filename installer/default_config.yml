@@ -86,12 +86,22 @@ Config:
       name: "soca.local" # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-directoryservice-microsoftad.html#cfn-directoryservice-microsoftad-name
       short_name: "SOCA" # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-directoryservice-microsoftad.html#cfn-directoryservice-microsoftad-shortname
       edition: "Standard" # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-directoryservice-microsoftad.html#cfn-directoryservice-microsoftad-edition
-      # Base organizational unit distinguished name (DN), like OU=Marketing,DC=example,DC=com
-      # if specify the base_ou, SOCA will access AD objects like person, organizationUint or group WITHIN it.
-      # Or will use domain name as default like
-      # run below powershell command in domain controller to get all organizational unit dn
-      # Get-ADOrganizationalUnit -Filter 'Name -like "*"' | Format-Table Name, DistinguishedName -A
-      base_ou: "OU=北京子公司,DC=yywad,DC=demo"
+    # Base organizational unit distinguished name (DN), like OU=Marketing,DC=example,DC=com
+    # if specify the base_ou, SOCA will access AD objects like person, organizationUint or group WITHIN it.
+    # Or will use domain name as default like
+    # run below powershell command in domain controller to get all organizational unit dn
+    # Get-ADOrganizationalUnit -Filter 'Name -like "*"' | Format-Table Name, DistinguishedName -A
+    base_ou: "OU=北京子公司,DC=yywad,DC=demo"
+    # Your certification file(pem format) path on SOCA scheduler like /home/centos/sample.pem
+    cert_file: "/home/centos/yywad_ca.pem"
+    # When using security ldap connection, the ldap url is like ldaps://EC2AMAZ-RM14AV1.example.com:636
+    # In above url, EC2AMAZ-RM14AV1.example.com is the certification user CN, you can run certutil command in AD controller
+    # 636 is default security port
+    # When using common ldap connection, the ldap url is domain name like ldap://example.com
+    # Common ldap case is only for read operation on AD object, like list all AD users or groups
+    # Security ldap case is suitable for read and write operation on AD object, like change AD password
+    # You can specify the
+    ldap_url: "ldaps://EC2AMAZ-RM14AV1.example.com:636"
 
   # Configure your AWS China Regions options below
   china:

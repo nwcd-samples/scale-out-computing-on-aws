@@ -44,7 +44,7 @@ def login():
 
 
 @index.route('/logout', methods=['GET'])
-@login_required
+# @login_required
 def logout():
     session_data = ["user", "sudoers", "api_key"]
     for param in session_data:

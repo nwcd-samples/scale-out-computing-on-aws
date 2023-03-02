@@ -58,7 +58,7 @@ class Group(Resource):
         if group is None:
             return errors.all_errors("CLIENT_MISSING_PARAMETER", "group (str) parameter is required")
         # else:
-        #     if group.endswith(config.Config.GROUP_NAME_SUFFIX):
+        #    if group.endswith(config.Config.GROUP_NAME_SUFFIX):
         #         pass
         #     else:
         #         group = f"{group}{config.Config.GROUP_NAME_SUFFIX}"
@@ -69,17 +69,13 @@ class Group(Resource):
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
-            if config.Config.OU_BASE:
-                group_search_base = config.Config.OU_BASE
-            else:
-                group_search_base = config.Config.LDAP_BASE
+            group_search_base = f"{config.Config.LDAP_BASE}"
             group_search_scope = ldap.SCOPE_SUBTREE
             filter_criteria = f"(&(objectClass=group)(cn={group}))"
             groups = conn.search_s(group_search_base, group_search_scope, filter_criteria)
             if groups.__len__() == 0:
                 logger.info(f"{group} does not exist")
                 return errors.all_errors("GROUP_DO_NOT_EXIST")
-
             for group in groups:
                 # invalid group:(None, ['ldap://ForestDnsZones.yywad.demo/DC=ForestDnsZones,DC=yywad,DC=demo'])
                 if group[0]:
@@ -91,7 +87,6 @@ class Group(Resource):
                             logger.info(f"Detected group member {member}")
                             members.append(member.decode("utf-8"))
                             # return {"success": False, "message": "Unable to retrieve memberUid for this group: " + str(group_base) + "members: "+str(group[1]["memberUid"])}, 500
-
             return {"success": True, "message": {"group_dn": group_base, "members": members}}, 200
 
         except Exception as err:
@@ -169,11 +164,11 @@ class Group(Resource):
 
         if group is None:
             return errors.all_errors("CLIENT_MISSING_PARAMETER", "group (str) parameter is required")
-        else:
-            if group.endswith(config.Config.GROUP_NAME_SUFFIX):
-                pass
-            else:
-                group = f"{group}{config.Config.GROUP_NAME_SUFFIX}"
+        # else:
+        #     if group.endswith(config.Config.GROUP_NAME_SUFFIX):
+        #         pass
+        #     else:
+        #         group = f"{group}{config.Config.GROUP_NAME_SUFFIX}"
 
         try:
             logger.info(f"About to create new group {group} with members {members}")
@@ -182,11 +177,7 @@ class Group(Resource):
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
             group_members = []
-            # please note, we will create new group under config.Config.OU_BASE or config.Config.LDAP_BASE
-            if config.Config.OU_BASE:
-                group_dn = f"cn={group},{config.Config.OU_BASE}"
-            else:
-                group_dn = f"cn={group},{config.Config.LDAP_BASE}"
+            group_dn = f"cn={group},{config.Config.LDAP_BASE}"
             if members is not None:
                 if not isinstance(members, list):
                     return {"success": False,
@@ -256,11 +247,11 @@ class Group(Resource):
             name: body
             schema:
               required:
-                - group
+                - user
               properties:
-                group:
+                user:
                   type: string
-                  description: AD group distinguished name, like CN=team1,OU=Marketing,DC=example,DC=com
+                  description: user of the SOCA user
 
         responses:
           200:
@@ -283,19 +274,18 @@ class Group(Resource):
 
         if group is None:
             return errors.all_errors("CLIENT_MISSING_PARAMETER", "group (str) parameter is required")
-        # else:
-        #     if group.endswith(config.Config.GROUP_NAME_SUFFIX):
-        #         pass
-        #     else:
-        #         group = f"{group}{config.Config.GROUP_NAME_SUFFIX}"
-        group_response = get("api/v1/ldap/activedirectory/group")
+        else:
+            if group.endswith(config.Config.GROUP_NAME_SUFFIX):
+                pass
+            else:
+                group = f"{group}{config.Config.GROUP_NAME_SUFFIX}"
         try:
             conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
-            # group_dn = f"cn={group},{config.Config.LDAP_BASE}"
-            conn.delete_s(group)
+            group_dn = f"cn={group},{config.Config.LDAP_BASE}"
+            conn.delete_s(group_dn)
             return {"success": True, "message": "Deleted Resource."}, 200
         except Exception as err:
             return errors.all_errors(type(err).__name__, err)
@@ -304,11 +294,6 @@ class Group(Resource):
     def put(self):
         """
         Add/Remove user to/from a LDAP group
-        Please note, current method doesn't work, because :
-        1. the parameter user and group is CN not DN, the default structure is ad user in Users directory
-           such as cn=zhangsan,cn=Users,dc=test,dc=com, it doesn't match the actual case
-           since actual OU structure is not determined
-        2. If just pass the CN but not DN, its parent node will not be determined.
         ---
         tags:
           - Group Management
@@ -375,10 +360,10 @@ class Group(Resource):
             conn.set_option(ldap.OPT_REFERRALS, 0)
             group_dn = f"cn={group},{config.Config.LDAP_BASE}"
             user_dn = f"cn={user},{config.Config.LDAP_BASE}"
-            # if "ou=users" in user.lower():
-            #     user_dn = user
-            # else:
-            #     user_dn = f"cn={user},{config.Config.LDAP_BASE}"
+            # if "cn=users" in user.lower():
+            #    user_dn = user
+            #else:
+            #    user_dn = f"cn={user},ou=Users,OU={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
             logger.info(f"Ready to place user {user_dn} in group {group_dn} are ready")
             get_all_users = get(config.Config.FLASK_ENDPOINT + "/api/ldap/users",
                                 headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},

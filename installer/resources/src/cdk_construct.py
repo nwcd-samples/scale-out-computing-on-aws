@@ -496,7 +496,9 @@ class SOCAInstall(cdk.Stack):
             self.soca_resources["ds_type"] = user_specified_variables.directory_service_type
             self.soca_resources["ds_domain_dns"] = user_specified_variables.directory_service_dns.split(',')
             self.soca_resources["ds_domain_name"] = user_specified_variables.directory_service_name
-        self.soca_resources["ds_domain_base_ou"] = install_props.Config.directoryservice.activedirectory.base_ou
+        self.soca_resources["ds_domain_base_ou"] = install_props.Config.directoryservice.base_ou
+        self.soca_resources["ds_cert_file"] = install_props.Config.directoryservice.cert_file
+        self.soca_resources["ds_ldap_url"] = install_props.Config.directoryservice.ldap_url
 
         existed_rule_association = FindExistingResource(user_specified_variables.region,user_specified_variables.client_ip)\
             .check_resolver_rules_associations(self.soca_resources["vpc"].vpc_id, self.soca_resources["ds_domain_name"])
@@ -837,11 +839,9 @@ class SOCAInstall(cdk.Stack):
                 secret["DSDomainAdminUsername"] = self.soca_resources["ds_domain_admin"]
                 secret["DSDomainAdminPassword"] = self.soca_resources["ds_domain_admin_password"]
                 secret["DSDomainDNS"] = self.soca_resources["ds_domain_dns"]
-                secret["DSServiceAccountUsername"] = "false"
                 secret["DSServiceAccountPassword"] = "false"
                 secret["DSResetLambdaFunctionArn"] = self.soca_resources["reset_ds_lambda"].function_arn
                 secret["DSType"] = self.soca_resources["ds_type"]
-                secret["DSBaseOU"] = self.soca_resources["ds_domain_base_ou"]
             else:
                 # OpenLDAP
                 secret["LdapName"] = install_props.Config.directoryservice.openldap.name
@@ -856,13 +856,15 @@ class SOCAInstall(cdk.Stack):
             secret["DSDomainAdminUsername"] = user_specified_variables.directory_service_user
             secret["DSDomainAdminPassword"] = user_specified_variables.directory_service_user_password
             secret["DSDomainDNS"] = self.soca_resources["ds_domain_dns"]
-            secret["DSServiceAccountUsername"] = "false"
+            # secret["DSServiceAccountUsername"] = user_specified_variables.ldap_user
             secret["DSServiceAccountPassword"] = "false"
             # please warn this will change AD account password
             secret["DSResetLambdaFunctionArn"] = self.soca_resources["reset_ds_lambda"].function_arn
             secret["DSType"] = self.soca_resources["ds_type"]
-            secret["DSBaseOU"] = self.soca_resources["ds_domain_base_ou"]
-        secret["SOCAAdmin"] = user_specified_variables.ldap_user
+        secret["DSBaseOU"] = self.soca_resources["ds_domain_base_ou"]
+        secret["DSCertFile"] = self.soca_resources["ds_cert_file"]
+        secret["DSLdapUrl"] = self.soca_resources["ds_ldap_url"]
+        secret["DSServiceAccountUsername"] = user_specified_variables.ldap_user
 
         self.soca_resources["soca_config"] = secretsmanager.CfnSecret(self, "SOCASecretManagerSecret",
                                                                       description=f"Store SOCA configuration for cluster {user_specified_variables.cluster_id}",

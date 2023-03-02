@@ -57,6 +57,7 @@ class Sudo(Resource):
         try:
             logger.info(f"Checking SUDO permission for {user}")
             if user == config.Config.SOCA_Admin:
+                logger.info(f"{user} is soca admin")
                 return {'success': True, 'message': "User has SUDO permissions."}, 200
             conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
             conn.protocol_version = 3
@@ -120,7 +121,7 @@ class Sudo(Resource):
         conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
         conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
         sudoers_group = config.Config.SUDOERS_GROUP_DN
-        dn_user = f"cn={user},{config.Config.LDAP_BASE}"
+        dn_user = f"cn={user},ou=Users,OU={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
         logger.info(f"Adding SUDO permission for {dn_user}")
         mod_attrs = [(ldap.MOD_ADD, 'member', [dn_user.encode("utf-8")])]
         try:
@@ -171,7 +172,7 @@ class Sudo(Resource):
         conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
         conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
         sudoers_group = config.Config.SUDOERS_GROUP_DN
-        dn_user = f"cn={user},{config.Config.LDAP_BASE}"
+        dn_user = f"cn={user},ou=Users,OU={config.Config.NETBIOS},{config.Config.LDAP_BASE}"
         logger.info(f"Revoking sudo permission for {dn_user}")
         mod_attrs = [(ldap.MOD_DELETE, 'member', [dn_user.encode("utf-8")])]
         try:

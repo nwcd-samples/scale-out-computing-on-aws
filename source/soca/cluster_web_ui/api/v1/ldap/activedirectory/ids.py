@@ -37,8 +37,8 @@ class Ids(Resource):
           501:
            description: Unknown error (followed by trace)
         """
-        uid_in_use = []
-        gid_in_use = []
+        uid_in_use = set()
+        gid_in_use = set()
         UID = 5000
         GID = 5000
         MAX_IDS = 65533  # 65534 is for "nobody" and 65535 is reserved
@@ -47,33 +47,31 @@ class Ids(Resource):
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
-            logger.info(f"Ready to search user within {config.Config.LDAP_BASE}")
             user_res = conn.search_s(f"{config.Config.LDAP_BASE}", ldap.SCOPE_SUBTREE, '(&(objectCategory=person)(objectClass=user))',["uidNumber"])
-            logger.info(f"Ready to search group within {config.Config.LDAP_BASE}")
             group_res = conn.search_s(f"{config.Config.LDAP_BASE}", ldap.SCOPE_SUBTREE, 'objectClass=group',["gidNumber"])
             for a in user_res:
-                if a[1]:
-                    uid_temp = int(a[1].get('uidNumber')[0])
-                    uid_in_use.append(uid_temp)
+                if a[0]:
+                    if a[1] and a[1]['uidNumber']:
+                        uid_temp = int(a[1]['uidNumber'][0])
+                    else:
+                        uid_temp = 0
+                    uid_in_use.add(uid_temp)
 
             for a in group_res:
-                if a[1]:
-                    gid_temp = int(a[1].get('gidNumber')[0])
-                    gid_in_use.append(gid_temp)
+                if a[0]:
+                    if a[1] and a[1]['gidNumber'][0]:
+                        gid_temp = int(a[1]['gidNumber'][0])
+                    else:
+                        gid_temp = 0
+                    gid_in_use.add(gid_temp)
 
             return {"success": True,
                     "message": {
                         "proposed_uid": choice([i for i in range(UID, MAX_IDS) if i not in uid_in_use]),
                         "proposed_gid": choice([i for i in range(GID, MAX_IDS) if i not in gid_in_use]),
-                        "uid_in_use": uid_in_use,
-                        "gid_in_use": gid_in_use}
+                        "uid_in_use": list(uid_in_use),
+                        "gid_in_use": list(gid_in_use)}
                     }, 200
 
         except Exception as err:
             return errors.all_errors(type(err).__name__, err)
-
-
-
-
-
-
