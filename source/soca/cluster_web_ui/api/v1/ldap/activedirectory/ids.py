@@ -43,12 +43,12 @@ class Ids(Resource):
         GID = 5000
         MAX_IDS = 65533  # 65534 is for "nobody" and 65535 is reserved
         try:
-            conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
+            conn = ldap.initialize(config.Config.LDAP_URL)
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
-            user_res = conn.search_s(f"{config.Config.LDAP_BASE}", ldap.SCOPE_SUBTREE, '(&(objectCategory=person)(objectClass=user))',["uidNumber"])
-            group_res = conn.search_s(f"{config.Config.LDAP_BASE}", ldap.SCOPE_SUBTREE, 'objectClass=group',["gidNumber"])
+            user_res = conn.search_s(f"{config.Config.OU_BASE}", ldap.SCOPE_SUBTREE, '(&(objectCategory=person)(objectClass=user))',["uidNumber"])
+            group_res = conn.search_s(f"{config.Config.OU_BASE}", ldap.SCOPE_SUBTREE, 'objectClass=group',["gidNumber"])
             for a in user_res:
                 if a[0]:
                     if a[1] and a[1]['uidNumber']:

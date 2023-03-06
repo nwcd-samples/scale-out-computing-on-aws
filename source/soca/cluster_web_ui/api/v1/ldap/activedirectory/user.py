@@ -12,7 +12,7 @@
 ######################################################################################################################
 
 import hashlib
-import os
+# import os
 from base64 import b64encode as encode
 import time
 import string
@@ -26,72 +26,15 @@ import json
 import logging
 from flask import request
 from decorators import private_api, admin_api
-import sys
-import shutil
-import datetime
-from cryptography.hazmat.primitives import serialization as crypto_serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.backends import default_backend as crypto_default_backend
+# import sys
+# import shutil
+# import datetime
+# from cryptography.hazmat.primitives import serialization as crypto_serialization
+# from cryptography.hazmat.primitives.asymmetric import rsa
+# from cryptography.hazmat.backends import default_backend as crypto_default_backend
 import ldap.modlist as modlist
 
 logger = logging.getLogger("api")
-
-
-def create_home(username, usergroup):
-    try:
-        user_home = config.Config.USER_HOME
-        logger.info(f"username: {username}, usergroup: {usergroup}, user_home: {user_home}")
-        if os.path.exists(f"{user_home}/{username}"):
-            return False
-        logger.info(f"Begin to create home directory")
-        key = rsa.generate_private_key(backend=crypto_default_backend(), public_exponent=65537, key_size=2048)
-        private_key = key.private_bytes(
-            crypto_serialization.Encoding.PEM,
-            crypto_serialization.PrivateFormat.TraditionalOpenSSL,
-            crypto_serialization.NoEncryption())
-        public_key = key.public_key().public_bytes(
-            crypto_serialization.Encoding.OpenSSH,
-            crypto_serialization.PublicFormat.OpenSSH
-        )
-        private_key_str = private_key.decode('utf-8')
-        public_key_str = public_key.decode('utf-8')
-        # Create user directory structure
-        user_path = f"{user_home}/{username}/.ssh"
-        os.makedirs(user_path)
-
-        # Copy default .bash profile
-        shutil.copy('/etc/skel/.bashrc', f'{"/".join(user_path.split("/")[:-1])}/')
-        shutil.copy('/etc/skel/.bash_profile', f'{"/".join(user_path.split("/")[:-1])}/')
-        shutil.copy('/etc/skel/.bash_logout', f'{"/".join(user_path.split("/")[:-1])}/')
-
-        # Create SSH keypair
-        print(private_key_str, file=open(user_path + '/id_rsa', 'w'))
-        print(public_key_str, file=open(user_path + '/id_rsa.pub', 'w'))
-        print(public_key_str, file=open(user_path + '/authorized_keys', 'w'))
-
-        # Adjust file/folder ownership
-        for path in [f"{user_home}/{username}",
-                     f"{user_home}/{username}/.ssh",
-                     f"{user_home}/{username}/.ssh/authorized_keys",
-                     f"{user_home}/{username}/.ssh/id_rsa",
-                     f"{user_home}/{username}/.ssh/id_rsa.pub",
-                     f"{user_home}/{username}/.bashrc",
-                     f"{user_home}/{username}/.bash_profile",
-                     f"{user_home}/{username}/.bash_logout"]:
-            shutil.chown(path, user=username, group=usergroup)
-
-        # Adjust file/folder permissions
-        os.chmod(f"{user_home}/{username}", 0o700)
-        os.chmod(f"{user_home}/{username}/.ssh", 0o700)
-        os.chmod(f"{user_home}/{username}/.ssh/id_rsa", 0o600)
-        os.chmod(f"{user_home}/{username}/.ssh/authorized_keys", 0o600)
-        return True
-
-    except Exception as e:
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        print(exc_type, fname, exc_tb.tb_lineno)
-        return e
 
 
 class User(Resource):
@@ -129,11 +72,11 @@ class User(Resource):
             return errors.all_errors("CLIENT_MISSING_PARAMETER", "user (str) parameter is required")
 
         try:
-            conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
+            conn = ldap.initialize(config.Config.LDAP_URL)
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
-            user_search_base = f"{config.Config.LDAP_BASE}"
+            user_search_base = config.Config.OU_BASE
             user_search_scope = ldap.SCOPE_SUBTREE
             user_filter = f"(&(objectClass=user)(sAMAccountName={user}))"
             check_user = conn.search_s(user_search_base, user_search_scope, user_filter)
@@ -252,13 +195,13 @@ class User(Resource):
                 return errors.all_errors("GID_ALREADY_IN_USE")
 
         try:
-            cert_file = '/home/centos/yywad_ca.pem'
-            ldap.set_option(ldap.OPT_X_TLS_CACERTFILE, cert_file)
+            # certification file sample: '/home/centos/yywad_ca.pem'
+            ldap.set_option(ldap.OPT_X_TLS_CACERTFILE, config.Config.CERT_FILE)
             # ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
-            security_url = f"ldaps://EC2AMAZ-RM14AV1.yywad.demo:636"
+            # security url sample: ldaps://EC2AMAZ-RM14AV1.yywad.demo:636
             # security_url = f"ldaps://{config.Config.DOMAIN_NAME}:636"
-            conn = ldap.initialize(security_url)
-            logger.info(f'Ready to connect url {security_url}')
+            conn = ldap.initialize(config.Config.LDAP_URL)
+            logger.info(f'Ready to connect url {config.Config.LDAP_UR}')
             ldap.set_option(ldap.OPT_REFERRALS, 0)
             ldap.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
             ldap.set_option(ldap.OPT_X_TLS, ldap.OPT_X_TLS_DEMAND)
@@ -345,9 +288,9 @@ class User(Resource):
                 return errors.all_errors("UNABLE_TO_ADD_USER_TO_GROUP", f"User/Group created but could not add user to his group due to {update_group.json()}")
             '''
             # Create home directory
-            logger.info("About to create home directory for user")
-            if create_home(user, group) is False:
-                return errors.all_errors("UNABLE_CREATE_HOME", "User added but unable to create home director")
+            # logger.info("About to create home directory for user")
+            # if create_home(user, group) is False:
+            #     return errors.all_errors("UNABLE_CREATE_HOME", "User added but unable to create home director")
 
             logger.info(f"About to generate API KEY for {user}")
             # Create API Key

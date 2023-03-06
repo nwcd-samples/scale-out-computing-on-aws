@@ -65,29 +65,31 @@ class Group(Resource):
 
         try:
             logger.info(f"Received group request for {group}")
-            conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
+            conn = ldap.initialize(config.Config.LDAP_URL)
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
-            group_search_base = f"{config.Config.LDAP_BASE}"
+            group_search_base = config.Config.OU_BASE
             group_search_scope = ldap.SCOPE_SUBTREE
-            filter_criteria = f"(&(objectClass=group)(cn={group}))"
+            filter_criteria = f"(|(&(objectClass=group)(cn={group}))(&(objectClass=organizationalUnit)(name={group})))"
             groups = conn.search_s(group_search_base, group_search_scope, filter_criteria)
-            if groups.__len__() == 0:
-                logger.info(f"{group} does not exist")
-                return errors.all_errors("GROUP_DO_NOT_EXIST")
+            result = {}
             for group in groups:
                 # invalid group:(None, ['ldap://ForestDnsZones.yywad.demo/DC=ForestDnsZones,DC=yywad,DC=demo'])
                 if group[0]:
                     logger.info(f"Detected {group}")
-                    group_base = group[0]
+                    result["group_dn"] = group[0]
                     members = []
                     if "member" in group[1].keys():
                         for member in group[1]["member"]:
                             logger.info(f"Detected group member {member}")
                             members.append(member.decode("utf-8"))
+                        result["members"] = members
                             # return {"success": False, "message": "Unable to retrieve memberUid for this group: " + str(group_base) + "members: "+str(group[1]["memberUid"])}, 500
-            return {"success": True, "message": {"group_dn": group_base, "members": members}}, 200
+            if result.__len__() == 0:
+                logger.info(f"{group} does not exist")
+                return errors.all_errors("GROUP_DO_NOT_EXIST")
+            return {"success": True, "message": result}, 200
 
         except Exception as err:
             return errors.all_errors(type(err).__name__, err)
@@ -172,12 +174,12 @@ class Group(Resource):
 
         try:
             logger.info(f"About to create new group {group} with members {members}")
-            conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
+            conn = ldap.initialize(config.Config.LDAP_URL)
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
             group_members = []
-            group_dn = f"cn={group},{config.Config.LDAP_BASE}"
+            group_dn = f"cn={group},{config.Config.OU_BASE}"
             if members is not None:
                 if not isinstance(members, list):
                     return {"success": False,
@@ -234,7 +236,6 @@ class Group(Resource):
         except Exception as err:
             return errors.all_errors(type(err).__name__, err)
 
-
     @admin_api
     def delete(self):
         """
@@ -262,29 +263,30 @@ class Group(Resource):
             description: Malformed client input
                 """
         parser = reqparse.RequestParser()
-        parser.add_argument('group', type=str, location='form')
+        parser.add_argument('group_dn', type=str, location='form')
         args = parser.parse_args()
-        group = args["group"]
+        group_dn = args["group_dn"]
         request_user = request.headers.get("X-SOCA-USER")
         if request_user is None:
             return errors.all_errors("X-SOCA-USER_MISSING")
 
-        if request_user == group:
-            return errors.all_errors("CLIENT_OWN_RESOURCE")
+        # if request_user == group:
+        #     return errors.all_errors("CLIENT_OWN_RESOURCE")
 
-        if group is None:
+        if group_dn is None:
             return errors.all_errors("CLIENT_MISSING_PARAMETER", "group (str) parameter is required")
-        else:
-            if group.endswith(config.Config.GROUP_NAME_SUFFIX):
-                pass
-            else:
-                group = f"{group}{config.Config.GROUP_NAME_SUFFIX}"
+        # else:
+        #     if group.endswith(config.Config.GROUP_NAME_SUFFIX):
+        #         pass
+        #     else:
+        #         group = f"{group}{config.Config.GROUP_NAME_SUFFIX}"
         try:
-            conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
+            conn = ldap.initialize(config.Config.LDAP_URL)
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
-            group_dn = f"cn={group},{config.Config.LDAP_BASE}"
+            # group_dn = f"cn={group},{config.Config.OU_BASE}"
+            conn.search_s(config.Config.OU_BASE,ldap.LDAP)
             conn.delete_s(group_dn)
             return {"success": True, "message": "Deleted Resource."}, 200
         except Exception as err:
@@ -354,12 +356,12 @@ class Group(Resource):
                     "message": "This action is not supported"}, 400
         try:
             logger.info(f"About to {action} {user} to {group}")
-            conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
+            conn = ldap.initialize(config.Config.LDAP_URL)
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
-            group_dn = f"cn={group},{config.Config.LDAP_BASE}"
-            user_dn = f"cn={user},{config.Config.LDAP_BASE}"
+            group_dn = f"cn={group},{config.Config.OU_BASE}"
+            user_dn = f"cn={user},{config.Config.OU_BASE}"
             # if "cn=users" in user.lower():
             #    user_dn = user
             #else:

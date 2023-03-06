@@ -40,12 +40,13 @@ class Groups(Resource):
         """
         try:
             all_ldap_groups = {}
-            conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
+            conn = ldap.initialize(config.Config.LDAP_URL)
             conn.protocol_version = 3
             conn.set_option(ldap.OPT_REFERRALS, 0)
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
-            group_search_base = f"{config.Config.LDAP_BASE}"
-            filter_criteria = f"(objectClass=group)"
+            group_search_base = f"{config.Config.OU_BASE}"
+            # we treat both AD group and organizational unit as SOCA group
+            filter_criteria = f"(|(objectClass=group)(objectClass=organizationalUnit))"
             groups = conn.search_s(group_search_base, ldap.SCOPE_SUBTREE, filter_criteria, ["cn", "member"])
             logger.info(f"Checking all AD groups with search filter {filter_criteria} and base {group_search_base}")
             for group in groups:

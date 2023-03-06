@@ -193,8 +193,9 @@ class Config(object):
         # With AD, user and group share the same OU (Domain Users).
         # To identify group/user, group associated to "user" will be named "user<GROUP_NAME_SUFFIX>"
     OU_BASE = soca_config["DSBaseOU"]
-    SOCA_Admin = soca_config["DSServiceAccountUsername"]
-    Cert_File = soca_config[""]
+    SOCA_ADMIN = soca_config["DSServiceAccountUsername"]
+    CERT_FILE = soca_config["DSCertFile"]
+    LDAP_URL = soca_config["DSLdapUrl"]
     GROUP_NAME_SUFFIX = "socagroup"
 
     # PBS

@@ -18,8 +18,7 @@ import ldap
 import errors
 from decorators import private_api
 import logging
-from api.v1.ldap.activedirectory.user import create_home
-from api.v1.ldap.activedirectory.ids import Ids
+from api.v1.ldap.activedirectory.user import ApiKey
 logger = logging.getLogger("api")
 
 class Authenticate(Resource):
@@ -68,28 +67,23 @@ class Authenticate(Resource):
             return errors.all_errors('CLIENT_MISSING_PARAMETER', "user (str) and password (str) are required.")
 
         try:
-            logger.info(f"Received authentication request for {user}")
-            conn = ldap.initialize(f"ldap://{config.Config.DOMAIN_NAME}")
+            conn = ldap.initialize(config.Config.LDAP_URL)
             conn.simple_bind_s(f"{user}@{config.Config.DOMAIN_NAME}", password)
             logger.info(f"Auth success")
             self.create_user_intermedia_info(user)
             return {'success': True, 'message': 'User is valid'}, 200
         except Exception as err:
-            logger.info(f"Auth failed")
+            logger.info(f"Auth failed: {str(err)}")
             return errors.all_errors(type(err).__name__, err)
 
     def create_user_intermedia_info(self, username):
-        group = f"{username}{config.Config.GROUP_NAME_SUFFIX}"
         home = f"{config.Config.USER_HOME}/{username}"
         if os.path.exists(home):
             return {'success': True, 'message': 'User home is existed'}
         try:
-            logger.info(f"About to create home directory for {username}")
-            if create_home(username=username, usergroup=group) is False:
-                return errors.all_errors("UNABLE_CREATE_HOME", f"Failed to create home directory for user {username}")
             logger.info(f"About to generate API KEY for {username}")
             # Create API Key
-            Ids.get(config.Config.FLASK_ENDPOINT + "/api/user/api_key",
+            ApiKey.post(config.Config.FLASK_ENDPOINT + "/api/user/api_key",
                 headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
                 params={"user": username},
                 verify=False).json()  # nosec
