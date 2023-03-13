@@ -91,6 +91,7 @@ def admin_api(f):
 
     return admin_resource
 
+
 # This is the only decorator that accept X-SOCA-PASSWORD. Used to query /api/user/api_key
 def retrieve_api_key(f):
     @wraps(f)
@@ -137,9 +138,8 @@ def login_required(f):
             if "api_key" in session:
                 # If a new API key has been issued,
                 check_existing_key = ApiKeys.query.filter_by(user=session["user"], is_active=True).first()
-                logger.info(f"check_existing_key.scope: {check_existing_key.scope}")
                 if check_existing_key:
-                    logger.info(f"check_existing_key.token: {check_existing_key.token}")
+                    logger.info(f"check_existing_key.token: {check_existing_key.token},check_existing_key.scope: {check_existing_key.scope}")
                     if check_existing_key.token != session["api_key"]:
                         # Update API Key in session
                         session["api_key"] = check_existing_key.token

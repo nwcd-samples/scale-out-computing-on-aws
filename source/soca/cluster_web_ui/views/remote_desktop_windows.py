@@ -252,7 +252,6 @@ def modify():
     return redirect("/remote_desktop_windows")
 
 
-
 @remote_desktop_windows.route('/remote_desktop_windows/schedule', methods=['POST'])
 @login_required
 def schedule():
@@ -284,11 +283,6 @@ def schedule():
         flash(f"Unable to modify your schedule because of {modify_schedule.json()['message']} ", "error")
 
     return redirect("/remote_desktop_windows")
-
-
-
-
-
 
 
 @remote_desktop_windows.route('/remote_desktop_windows/client', methods=['GET'])
