@@ -113,6 +113,7 @@ def retrieve_api_key(f):
         return {"success": False, "message": "Not authorized"}, 401
     return get_key
 
+
 # Private API can only be accessed with a valid pair of token or web app
 def private_api(f):
     @wraps(f)

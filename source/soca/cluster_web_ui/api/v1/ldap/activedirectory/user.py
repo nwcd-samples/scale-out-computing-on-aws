@@ -208,8 +208,8 @@ class User(Resource):
             ldap.set_option(ldap.OPT_X_TLS_DEMAND, True)
             ldap.set_option(ldap.OPT_DEBUG_LEVEL, 255)
             conn.simple_bind_s(f"{config.Config.ROOT_USER}@{config.Config.DOMAIN_NAME}", config.Config.ROOT_PW)
-            conn.protocol_version = 3
-            conn.set_option(ldap.OPT_REFERRALS, 0)
+            # conn.protocol_version = 3
+            # conn.set_option(ldap.OPT_REFERRALS, 0)
             dn_user = f"cn={user},cn=Users,{config.Config.LDAP_BASE}"
             attrs = {}
             attrs['objectClass'] = ['top'.encode('utf-8')
@@ -292,15 +292,15 @@ class User(Resource):
             # if create_home(user, group) is False:
             #     return errors.all_errors("UNABLE_CREATE_HOME", "User added but unable to create home director")
 
-            logger.info(f"About to generate API KEY for {user}")
+            # logger.info(f"About to generate API KEY for {user}")
             # Create API Key
-            try:
-                get(config.Config.FLASK_ENDPOINT + "/api/user/api_key",
-                    headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
-                    params={"user": user},
-                    verify=False).json()  # nosec
-            except Exception as err:
-                logger.error("User created but unable to create API key. SOCA will try to generate it when user log in for the first time " + str(err))
+            # try:
+            #     get(config.Config.FLASK_ENDPOINT + "/api/user/api_key",
+            #         headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY,"X-SOCA-PASSWORD": password},
+            #         params={"user": user},
+            #         verify=False).json()  # nosec
+            # except Exception as err:
+            #     logger.error("User created but unable to create API key. SOCA will try to generate it when user log in for the first time " + str(err))
 
             # # Add Sudo permission
             # if sudoers == 1:

@@ -116,6 +116,36 @@ def get_host_info(tag_uuid, cluster_id):
     return host_info
 
 
+def get_private_subnets(scheduler_instance_id):
+    """
+    To reduce the data transfer cost crossing AZ, when creating desktop,
+    it's better to list the private subnets within AZ which the schedular is placed
+    because desktop are only allowed on private subnets
+    """
+    node_subnets = []
+    try:
+        instance_resp = client_ec2.describe_instances(InstanceIds=[scheduler_instance_id])
+        instance = instance_resp['Reservations'][0]['Instances'][0]
+        schedule_az = instance['Placement']['AvailabilityZone']
+        # schedule_subnet = instance['SubnetId']
+        subnet_filter = [
+            {
+                'Name': 'availabilityZone', 'Values': [schedule_az]
+            },
+            {
+                'Name': 'defaultForAz', 'Values': ['false']
+            }
+        ]
+        subnet_resp = client_ec2.describe_subnets(Filters=subnet_filter)
+        if 'Subnets' in subnet_resp:
+            for subnet in subnet_resp['Subnets']:
+                node_subnets.append(subnet['SubnetId'])
+
+    except Exception as e:
+        logger.warning(f'When retrieving subnet info occurred error: {str(e)}')
+    return node_subnets
+
+
 @remote_desktop_windows.route('/remote_desktop_windows', methods=['GET'])
 @login_required
 def index():
@@ -145,6 +175,8 @@ def index():
         tz = pytz.timezone("UTC")
 
     server_time = (datetime.now(timezone.utc)).astimezone(tz).strftime("%Y-%m-%d (%A) %H:%M")
+    scheduler_id = read_secretmanager.get_soca_configuration()['SchedulerInstanceId']
+    private_subnets = get_private_subnets(scheduler_id)
 
     return render_template('remote_desktop_windows.html',
                            user=session["user"],
@@ -161,7 +193,8 @@ def index():
                            max_number_of_sessions=max_number_of_sessions,
                            auth_provider=config.Config.SOCA_AUTH_PROVIDER,
                            netbios="false" if config.Config.SOCA_AUTH_PROVIDER == "openldap" else config.Config.NETBIOS,
-                           ami_list=get_ami_info())
+                           ami_list=get_ami_info(),
+                           private_subnets=private_subnets)
 
 
 @remote_desktop_windows.route('/remote_desktop_windows/create', methods=['POST'])

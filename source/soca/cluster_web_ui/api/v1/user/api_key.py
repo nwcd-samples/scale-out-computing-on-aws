@@ -99,6 +99,7 @@ class ApiKey(Resource):
             logger.error(f"When retrieving api token occurred error {str(err)}")
             return errors.all_errors(type(err).__name__, err)
 
+    @retrieve_api_key
     def post(self):
         """
         create new api key for AD user

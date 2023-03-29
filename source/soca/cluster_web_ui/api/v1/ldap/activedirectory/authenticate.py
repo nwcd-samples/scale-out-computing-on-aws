@@ -17,8 +17,9 @@ import config
 import ldap
 import errors
 from decorators import private_api
+from requests import post
 import logging
-from api.v1.ldap.activedirectory.user import ApiKey
+
 logger = logging.getLogger("api")
 
 class Authenticate(Resource):
@@ -67,6 +68,8 @@ class Authenticate(Resource):
             return errors.all_errors('CLIENT_MISSING_PARAMETER', "user (str) and password (str) are required.")
 
         try:
+            ldap.set_option(ldap.OPT_X_TLS_CACERTFILE, config.Config.CERT_FILE)
+            ldap.set_option(ldap.OPT_DEBUG_LEVEL, 255)
             conn = ldap.initialize(config.Config.LDAP_URL)
             conn.simple_bind_s(f"{user}@{config.Config.DOMAIN_NAME}", password)
             logger.info(f"Auth success")
@@ -83,7 +86,7 @@ class Authenticate(Resource):
         try:
             logger.info(f"About to generate API KEY for {username}")
             # Create API Key
-            ApiKey.post(config.Config.FLASK_ENDPOINT + "/api/user/api_key",
+            post(config.Config.FLASK_ENDPOINT + "/api/user/api_key",
                 headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
                 params={"user": username},
                 verify=False).json()  # nosec

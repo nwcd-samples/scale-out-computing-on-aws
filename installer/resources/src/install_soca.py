@@ -349,7 +349,7 @@ def get_install_parameters():
                     install_parameters["directory_service_name"] = directory_service["message"]["name"]
                     install_parameters["directory_service_dns"] = ','.join(directory_service["message"]["dns"])
                     install_parameters["directory_service_type"] = directory_service["message"]["type"]
-                    install_parameters["directory_service_base_ou"] = install_props.Config.directoryservice.activedirectory.base_ou
+                    install_parameters["directory_service_base_ou"] = install_props.Config.directoryservice.base_ou
                 else:
                     print(f"{fg('red')}Error: {directory_service['message']} {attr('reset')}")
                     sys.exit(1)

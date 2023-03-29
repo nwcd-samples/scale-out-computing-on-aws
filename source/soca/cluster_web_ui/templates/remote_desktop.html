@@ -561,25 +561,37 @@
                                               </select>
                                           </div>
                                       </div>
-                                     <div class="form-group row">
-                                          <label for="extra" class="col-sm-4 col-form-label">Optional</label>
-                                          <div class="col-sm-8">
-                                             <button class="btn btn-info btn-sm" type="button" data-toggle="collapse" data-target="#advancedOptions{{ n }}" aria-expanded="false">
-                                                 View Advanced Options
-                                            </button>
-                                          </div>
-                                      </div>
+<!--                                     <div class="form-group row">-->
+<!--                                          <label for="extra" class="col-sm-4 col-form-label">Optional</label>-->
+<!--                                          <div class="col-sm-8">-->
+<!--                                             <button class="btn btn-info btn-sm" type="button" data-toggle="collapse" data-target="#advancedOptions{{ n }}" aria-expanded="false">-->
+<!--                                                 View Advanced Options-->
+<!--                                            </button>-->
+<!--                                          </div>-->
+<!--                                      </div>-->
 
-                                      <div class="collapse" id="advancedOptions{{ n }}">
-                                          <br>
-                                          <div>
-                                               <div class="form-group">
-                                                   <input id="subnet_id" placeholder="VPC Subnet ID" class="form-control" type="text"  name="subnet_id">
-                                                   <small id="subnet_id" class="form-text text-muted">Launch your capacity in a specific subnet</small>
-                                               </div>
-                                          </div>
-                                          <br>
-                                      </div>
+<!--                                      <div class="collapse" id="advancedOptions{{ n }}">-->
+<!--                                          <br>-->
+<!--                                          <div>-->
+<!--                                               <div class="form-group">-->
+<!--                                                   <input id="subnet_id" placeholder="VPC Subnet ID" class="form-control" type="text"  name="subnet_id">-->
+<!--                                                   <small id="subnet_id" class="form-text text-muted">Launch your capacity in a specific subnet</small>-->
+<!--                                               </div>-->
+<!--                                          </div>-->
+<!--                                          <br>-->
+<!--                                      </div>-->
+                                      <div class="form-group row">
+                                            <label for="subnet_id" data-toggle="tooltip" data-placement="top"
+                                                   title="Specify a subnet for this desktop.To save the crossing AZ cost, the listed subnets are same as scheduler instance"
+                                                   class="col-sm-4 col-form-label">VPC Subnet</label>
+                                            <div class="col-sm-8">
+                                                <select class="form-control" name='subnet_id' id="subnet_id">
+                                                    {% for subnet in private_subnets %}
+                                                    <option value="{{ subnet }}">{{ subnet }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                    </div>
                                      <div align="center">
                                          <hr>
                                          <button type="submit"  class="btn btn-primary btn-icon-split">
