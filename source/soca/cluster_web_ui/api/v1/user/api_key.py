@@ -13,7 +13,7 @@
 
 from flask_restful import Resource, reqparse
 from models import db, ApiKeys
-from requests import get
+from requests import get, post
 import datetime
 import secrets
 import config
@@ -64,36 +64,38 @@ class ApiKey(Resource):
         user = args["user"]
         if user is None:
             return errors.all_errors("CLIENT_MISSING_PARAMETER", "user (str) parameter is required")
-
         try:
             check_existing_key = ApiKeys.query.filter_by(user=user,
                                                          is_active=True).first()
             if check_existing_key:
                 return {"success": True, "message": check_existing_key.token}, 200
             else:
-                try:
-                    # Create an API key for the user if needed
-                    user_exist = get(config.Config.FLASK_ENDPOINT + "/api/ldap/user",
-                                     headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
-                                     params={"user": user},
-                                     verify=False) # nosec
-                    if user_exist.status_code == 200:
-                        api_key = self.post(config.Config.FLASK_ENDPOINT + "/api/ldap/user",
-                                     headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
-                                     params={"user": user},
-                                     verify=False)
-                        if api_key.status_code == 200:
-                            return {"success": True,
-                                    "message": api_key.message}, 200
-                        return {"success": False,
-                                "message": "Fail to generate api token"}, 405
-                    else:
-                        return {"success": False,
-                                "message": "Not authorized"}, 401
-
-                except Exception as err:
-                    logger.error(f"When retrieving api token occurred error {str(err)}")
-                    return errors.all_errors(type(err).__name__, err)
+                return {"success": False, "message": "Not authorized"}, 401
+                # try:
+                #     # Create an API key for the user if needed
+                #     user_exist = get(config.Config.FLASK_ENDPOINT + "/api/ldap/user",
+                #                      headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
+                #                      params={"user": user},
+                #                      verify=False) # nosec
+                #     if user_exist.status_code == 200:
+                #         # api_key = post(config.Config.FLASK_ENDPOINT + "/api/ldap/user",
+                #         #              headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
+                #         #              params={"user": user},
+                #         #              verify=False)
+                #         # if api_key.status_code == 200:
+                #         #     return {"success": True,
+                #         #             "message": api_key.message}, 200
+                #         # return {"success": False,
+                #         #         "message": "Fail to generate api token"}, 405
+                #         return {"success": True,
+                #                 "message": api_key.message}, 200
+                #     else:
+                #         return {"success": False,
+                #                 "message": "Not authorized"}, 401
+                #
+                # except Exception as err:
+                #     logger.error(f"When retrieving api token occurred error {str(err)}")
+                #     return errors.all_errors(type(err).__name__, err)
 
         except Exception as err:
             logger.error(f"When retrieving api token occurred error {str(err)}")

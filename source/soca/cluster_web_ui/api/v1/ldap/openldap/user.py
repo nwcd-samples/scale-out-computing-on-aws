@@ -280,13 +280,13 @@ class User(Resource):
             if update_group.status_code != 200:
                 return errors.all_errors("UNABLE_TO_ADD_USER_TO_GROUP", "User/Group created but could not add user to his group")
 
-            # Create home directory
-            if create_home(user, group) is False:
-                return errors.all_errors("UNABLE_CREATE_HOME", "User added but unable to create home director")
-
+            # # Create home directory
+            # if create_home(user, group) is False:
+            #     return errors.all_errors("UNABLE_CREATE_HOME", "User added but unable to create home director")
+            #
             # Create API Key
             try:
-                get(config.Config.FLASK_ENDPOINT + "/api/user/api_key",
+                post(config.Config.FLASK_ENDPOINT + "/api/user/api_key",
                     headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
                     params={"user": user},
                     verify=False).json()  # nosec

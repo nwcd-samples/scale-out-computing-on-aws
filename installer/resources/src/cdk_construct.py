@@ -842,6 +842,10 @@ class SOCAInstall(cdk.Stack):
                 secret["DSServiceAccountPassword"] = "false"
                 secret["DSResetLambdaFunctionArn"] = self.soca_resources["reset_ds_lambda"].function_arn
                 secret["DSType"] = self.soca_resources["ds_type"]
+                secret["DSBaseOU"] = self.soca_resources["ds_domain_base_ou"]
+                secret["DSCertFile"] = self.soca_resources["ds_cert_file"]
+                secret["DSLdapUrl"] = self.soca_resources["ds_ldap_url"]
+                secret["DSServiceAccountUsername"] = user_specified_variables.ldap_user
             else:
                 # OpenLDAP
                 secret["LdapName"] = install_props.Config.directoryservice.openldap.name
@@ -861,10 +865,10 @@ class SOCAInstall(cdk.Stack):
             # please warn this will change AD account password
             secret["DSResetLambdaFunctionArn"] = self.soca_resources["reset_ds_lambda"].function_arn
             secret["DSType"] = self.soca_resources["ds_type"]
-        secret["DSBaseOU"] = self.soca_resources["ds_domain_base_ou"]
-        secret["DSCertFile"] = self.soca_resources["ds_cert_file"]
-        secret["DSLdapUrl"] = self.soca_resources["ds_ldap_url"]
-        secret["DSServiceAccountUsername"] = user_specified_variables.ldap_user
+            secret["DSBaseOU"] = self.soca_resources["ds_domain_base_ou"]
+            secret["DSCertFile"] = self.soca_resources["ds_cert_file"]
+            secret["DSLdapUrl"] = self.soca_resources["ds_ldap_url"]
+            secret["DSServiceAccountUsername"] = user_specified_variables.ldap_user
 
         self.soca_resources["soca_config"] = secretsmanager.CfnSecret(self, "SOCASecretManagerSecret",
                                                                       description=f"Store SOCA configuration for cluster {user_specified_variables.cluster_id}",

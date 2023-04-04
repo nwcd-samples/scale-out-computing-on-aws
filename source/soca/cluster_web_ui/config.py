@@ -192,10 +192,10 @@ class Config(object):
         SUDOERS_GROUP_DN = f"CN={SUDOERS_GROUP},OU=AWS Delegated Groups,{LDAP_BASE}"
         # With AD, user and group share the same OU (Domain Users).
         # To identify group/user, group associated to "user" will be named "user<GROUP_NAME_SUFFIX>"
-    OU_BASE = soca_config["DSBaseOU"]
-    SOCA_ADMIN = soca_config["DSServiceAccountUsername"]
-    CERT_FILE = soca_config["DSCertFile"]
-    LDAP_URL = soca_config["DSLdapUrl"]
+        OU_BASE = soca_config["DSBaseOU"]
+        SOCA_ADMIN = soca_config["DSServiceAccountUsername"]
+        CERT_FILE = soca_config["DSCertFile"]
+        LDAP_URL = soca_config["DSLdapUrl"]
     GROUP_NAME_SUFFIX = "socagroup"
 
     # PBS
