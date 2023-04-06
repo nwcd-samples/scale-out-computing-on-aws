@@ -276,7 +276,7 @@ class User(Resource):
                 return errors.all_errors(type(error).__name__, error)
 
             # Add user to group, need to wait 30 for account sync on AD
-            '''
+
             update_group = put(config.Config.FLASK_ENDPOINT + "/api/ldap/group",
                                headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
                                data={"group": f"{user}group",
@@ -286,7 +286,7 @@ class User(Resource):
 
             if update_group.status_code != 200:
                 return errors.all_errors("UNABLE_TO_ADD_USER_TO_GROUP", f"User/Group created but could not add user to his group due to {update_group.json()}")
-            '''
+
             # Create home directory
             # logger.info("About to create home directory for user")
             # if create_home(user, group) is False:
@@ -302,16 +302,16 @@ class User(Resource):
             # except Exception as err:
             #     logger.error("User created but unable to create API key. SOCA will try to generate it when user log in for the first time " + str(err))
 
-            # # Add Sudo permission
-            # if sudoers == 1:
-            #     logger.info(f"Adding SUDO permissions to user {user}")
-            #     grant_sudo = post(config.Config.FLASK_ENDPOINT + "/api/ldap/sudo",
-            #                       headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
-            #                       data={"user": user},
-            #                       verify=False # nosec
-            #                       )
-            #     if grant_sudo.status_code != 200:
-            #         return errors.all_errors("UNABLE_TO_GRANT_SUDO", "User added but unable to give admin permissions")
+            # Add Sudo permission
+            if sudoers == 1:
+                logger.info(f"Adding SUDO permissions to user {user}")
+                grant_sudo = post(config.Config.FLASK_ENDPOINT + "/api/ldap/sudo",
+                                  headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
+                                  data={"user": user},
+                                  verify=False # nosec
+                                  )
+                if grant_sudo.status_code != 200:
+                    return errors.all_errors("UNABLE_TO_GRANT_SUDO", "User added but unable to give admin permissions")
             logger.info("User added successfully")
             return {"success": True, "message": "Added user"}, 200
 

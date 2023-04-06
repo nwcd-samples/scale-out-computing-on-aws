@@ -259,13 +259,20 @@ class User(Resource):
 
             conn.simple_bind_s(config.Config.ROOT_DN, config.Config.ROOT_PW)
 
-            # Create group first to prevent GID issue
-            create_user_group = post(config.Config.FLASK_ENDPOINT + "/api/ldap/group",
-                                     headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
-                                     data={"group": f"{group}", "gid": gid},
-                                     verify=False) # nosec
-            if create_user_group.status_code != 200:
-                return errors.all_errors("COULD_NOT_CREATE_GROUP", str(create_user_group.text))
+            # Check if the expected group is existed
+            expected_group_resp = get(config.Config.FLASK_ENDPOINT + "/api/ldap/group",
+                                      headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
+                                      params={"group": group},
+                                      verify=False)
+            logger.info(f"Get the response to check if group existed {expected_group_resp}")
+            if expected_group_resp.status_code != 200:
+                # Create group first to prevent GID issue
+                create_user_group = post(config.Config.FLASK_ENDPOINT + "/api/ldap/group",
+                                         headers={"X-SOCA-TOKEN": config.Config.API_ROOT_KEY},
+                                         data={"group": f"{group}", "gid": gid},
+                                         verify=False) # nosec
+                if create_user_group.status_code != 200:
+                    return errors.all_errors("COULD_NOT_CREATE_GROUP", str(create_user_group.text))
 
             # Assign user
             conn.add_s(dn_user, attrs)

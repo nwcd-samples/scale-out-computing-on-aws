@@ -53,14 +53,18 @@ def get_private_subnets(scheduler_instance_id):
     try:
         instance_resp = client_ec2.describe_instances(InstanceIds=[scheduler_instance_id])
         instance = instance_resp['Reservations'][0]['Instances'][0]
-        schedule_az = instance['Placement']['AvailabilityZone']
+        scheduler_az = instance['Placement']['AvailabilityZone']
+        scheduler_vpc = instance['VpcId']
         # schedule_subnet = instance['SubnetId']
         subnet_filter = [
             {
-                'Name': 'availabilityZone', 'Values': [schedule_az]
+                'Name': 'availabilityZone', 'Values': [scheduler_az]
             },
             {
                 'Name': 'defaultForAz', 'Values': ['false']
+            },
+            {
+                'Name': 'vpcId', 'Values': [scheduler_vpc]
             }
         ]
         subnet_resp = client_ec2.describe_subnets(Filters=subnet_filter)

@@ -177,16 +177,17 @@ class ApiKey(Resource):
             # it will disrupt customer own AD structure. The only exception is SOCA admin user can manager these objects
             # If there need to identify SOCA user, we can use /data/home/ path, since all SOCA users will be placed in it
             # Adjust file/folder ownership
-            # for path in [f"{user_home}/{username}",
-            #              f"{user_home}/{username}/.ssh",
-            #              f"{user_home}/{username}/.ssh/authorized_keys",
-            #              f"{user_home}/{username}/.ssh/id_rsa",
-            #              f"{user_home}/{username}/.ssh/id_rsa.pub",
-            #              f"{user_home}/{username}/.bashrc",
-            #              f"{user_home}/{username}/.bash_profile",
-            #              f"{user_home}/{username}/.bash_logout"]:
-            #     # please make sure the usergroup is existed already on SOCA scheduler
-            #     shutil.chown(path, user=username, group=usergroup)
+            user_group = f"{user_home}{config.Config.GROUP_NAME_SUFFIX}"
+            for path in [f"{user_home}/{username}",
+                         f"{user_home}/{username}/.ssh",
+                         f"{user_home}/{username}/.ssh/authorized_keys",
+                         f"{user_home}/{username}/.ssh/id_rsa",
+                         f"{user_home}/{username}/.ssh/id_rsa.pub",
+                         f"{user_home}/{username}/.bashrc",
+                         f"{user_home}/{username}/.bash_profile",
+                         f"{user_home}/{username}/.bash_logout"]:
+                # please make sure the usergroup is existed already on SOCA scheduler
+                shutil.chown(path, user=username, group=user_group)
 
             # Adjust file/folder permissions
             os.chmod(f"{user_home}/{username}", 0o700)
