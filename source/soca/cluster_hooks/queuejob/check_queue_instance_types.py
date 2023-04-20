@@ -25,8 +25,8 @@ If you are installing this file manually, make sure to replace %SOCA_CONFIGURATI
 
 import sys
 import pbs
-if "/apps/soca/%SOCA_CONFIGURATION/python/latest/lib/python3.7/site-packages" not in sys.path:
-    sys.path.append("/apps/soca/%SOCA_CONFIGURATION/python/latest/lib/python3.7/site-packages")
+if "/usr/local/python37/lib/python3.7/site-packages" not in sys.path:
+    sys.path.append("/usr/local/python37/lib/python3.7/site-packages")
 import yaml
 
 

@@ -363,7 +363,7 @@ if __name__ == "__main__":
         'qdel': '/opt/pbs/bin/qdel',
         'pbsnodes': '/opt/pbs/bin/pbsnodes',
         'socaqstat': '/apps/soca/' + os.environ["SOCA_CONFIGURATION"] + '/cluster_manager/socaqstat.py',
-        'python': '/apps/soca/' + os.environ["SOCA_CONFIGURATION"] + '/python/latest/bin/python3'
+        'python': '/usr/local/python37/bin/python3.7'
     }
 
     # AWS Clients

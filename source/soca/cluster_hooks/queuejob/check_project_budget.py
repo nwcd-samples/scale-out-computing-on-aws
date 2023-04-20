@@ -24,8 +24,8 @@ Note: If you make any change to this file, you MUST re-execute the import comman
 import sys
 import pbs
 from configparser import SafeConfigParser  # PBS env is py3.7 or py3.6, so use configparser (instead of ConfigParser in py2.7)
-if "/apps/soca/%SOCA_CONFIGURATION/python/latest/lib/python3.7/site-packages" not in sys.path:
-    sys.path.append("/apps/soca/%SOCA_CONFIGURATION/python/latest/lib/python3.7/site-packages")
+if "/usr/local/python37/lib/python3.7/site-packages" not in sys.path:
+    sys.path.append("/usr/local/python37/lib/python3.7/site-packages")
 import boto3
 
 

@@ -28,8 +28,8 @@ import hook notify_job_complete application/x-python default /apps/soca/%SOCA_CO
 import sys
 import pbs
 
-if "/apps/soca/%SOCA_CONFIGURATION/python/latest/lib/python3.7/site-packages" not in sys.path:
-    sys.path.append("/apps/soca/%SOCA_CONFIGURATION/python/latest/lib/python3.7/site-packages")
+if "/usr/local/python37/lib/python3.7/site-packages" not in sys.path:
+    sys.path.append("/usr/local/python37/lib/python3.7/site-packages")
 
 import boto3
 import socket
